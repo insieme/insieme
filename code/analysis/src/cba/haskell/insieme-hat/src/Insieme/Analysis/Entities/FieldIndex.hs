@@ -68,7 +68,7 @@ import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Utils.Arithmetic
 import Insieme.Utils.ParseInt
 
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 
 class (Eq v, Ord v, Show v, Hashable v, Typeable v, NFData v) => FieldIndex v where
         

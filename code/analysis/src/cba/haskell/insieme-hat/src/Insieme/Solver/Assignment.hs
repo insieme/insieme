@@ -47,8 +47,8 @@ import Control.DeepSeq
 import Data.Dynamic
 import Data.Maybe
 
-import           Data.Set (Set)
-import qualified Data.Set as Set
+import           Data.AbstractSet (Set)
+import qualified Data.AbstractSet as Set
 
 import {-# SOURCE #-} Insieme.Solver.Var
 

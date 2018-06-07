@@ -50,7 +50,7 @@ import Control.DeepSeq (NFData)
 import Data.Typeable
 import GHC.Generics (Generic)
 
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 
 import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Query as Q

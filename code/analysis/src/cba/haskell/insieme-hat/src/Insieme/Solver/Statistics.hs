@@ -46,9 +46,9 @@ import Text.Printf
 import GHC.Stats
 
 import qualified Data.Graph as Graph
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import           Data.AbstractMap.Strict (Map)
+import qualified Data.AbstractMap.Strict as Map
+import qualified Data.AbstractSet as Set
 
 import Insieme.Solver.Constraint
 import Insieme.Solver.Identifier

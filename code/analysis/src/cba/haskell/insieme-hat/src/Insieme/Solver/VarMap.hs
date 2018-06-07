@@ -47,8 +47,8 @@ module Insieme.Solver.VarMap
 
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
-import           Data.Set (Set)
-import qualified Data.Set as Set
+import           Data.AbstractSet (Set)
+import qualified Data.AbstractSet as Set
 import Prelude hiding (lookup)
 
 import {-# SOURCE #-} Insieme.Solver.Var

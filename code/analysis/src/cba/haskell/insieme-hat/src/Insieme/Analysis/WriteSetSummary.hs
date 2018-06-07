@@ -67,7 +67,7 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Inspire.NodeAddress
 import Insieme.Query
 
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Solver as Solver

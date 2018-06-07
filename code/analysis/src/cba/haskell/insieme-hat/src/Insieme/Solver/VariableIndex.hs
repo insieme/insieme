@@ -52,7 +52,7 @@ module Insieme.Solver.VariableIndex
 
 import Data.Maybe
 
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 
 import {-# SOURCE #-} Insieme.Solver.Var
 

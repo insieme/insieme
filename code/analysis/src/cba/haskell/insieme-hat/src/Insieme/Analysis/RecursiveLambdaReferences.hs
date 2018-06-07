@@ -54,7 +54,7 @@ import qualified Insieme.Query as Q
 
 import Insieme.Solver
 
-import qualified Data.Map as Map
+import qualified Data.AbstractMap as Map
 import Data.Maybe
 import Data.Hashable
 

@@ -115,14 +115,17 @@ import qualified Control.Monad.State.Strict as State
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import           Data.AbstractMap.Strict (Map)
+import qualified Data.AbstractMap.Strict as Map
+import           Data.AbstractLut (Lut)
+import qualified Data.AbstractLut as Lut
+
 import           Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IntMap
 --import           Data.Judy (JudyL)
 --import qualified Data.Judy as Judy
-import           Data.Set (Set)
-import qualified Data.Set as Set
+import           Data.AbstractSet (Set)
+import qualified Data.AbstractSet as Set
 
 import Insieme.Inspire (NodePath)
 import qualified Insieme.Inspire as I
@@ -345,10 +348,10 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
         vars = Prelude.zip [1..] allVars
 
         -- a reverse lookup map for vars
-        rev = Map.fromList $ map swap vars
+        rev = Lut.fromList $ map swap vars
 
         -- a lookup function for rev
-        index v = fromMaybe 0 $ Map.lookup v rev
+        index v = fromMaybe 0 $ Lut.lookup v rev
 
         -- computes the list of dependencies
         deps = foldr go [] vars

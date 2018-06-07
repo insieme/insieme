@@ -37,8 +37,8 @@
 
 module Insieme.Solver.SolverState where
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import           Data.AbstractMap.Strict (Map)
+import qualified Data.AbstractMap.Strict as Map
 
 import Insieme.Solver.Identifier
 

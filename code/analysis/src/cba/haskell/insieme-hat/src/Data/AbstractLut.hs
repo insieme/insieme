@@ -35,62 +35,58 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Main where
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE ConstraintKinds #-}
 
-import System.IO
-import Control.Monad
-import Control.Exception
+module Data.AbstractLut where
+
 import Control.DeepSeq
-import Data.List
-import Insieme.Inspire.BinaryParser
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Visit
+import Data.Maybe
+import GHC.Generics
 
-import qualified Data.AbstractSet as Set
-import qualified Data.ByteString as BS
-import qualified Insieme.Inspire as IR
-
-main :: IO ()
-main = do
-    Right ir <- parseBinaryDump <$> BS.getContents
-    -- ir' <- evaluate $ force ir
-
---    print  "evaluate"
-
---    let cnt n = (1+) $ sum $ map cnt $ IR.getChildren n
---    let ids n = Set.insert (IR.getID n) $ Set.unions $ map ids $ IR.getChildren n
-
---    print  ("cnt", cnt ir')
---    print  ("ids", ids ir')
-
--- (isCallExpr)
-    let nodes = collectAllPrune (const True) (const NoPrune) $ mkNodeAddress [] ir
-    let paths = collectAllPrunePaths (const True) (const NoPrune) ir
---    let nodes' = collectAllPrune' isCallExpr ir
-
---    let cnt n = (1+) $ sum $ map cnt $ IR.getChildren n
-
---    print $ cnt ir
-
-    print $ length paths
---    print $ take 100 nodes
---    mapM_ evaluate $ map force nodes
---    evaluate $ force nodes
-
---(flip mkNodeAddress ir)
--- mkNodeAddresses' ir
---    evaluate $ force $ map getPathReversed $ mkNodeAddresses ir paths
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 
-    -- print ("is sorted", sort nodes' == nodes')
-    -- print (" elems", take 10 (sort nodes'))
-    -- print ("selems", take 10       nodes')
+newtype Lut a b = Lut (Map a b)
+    deriving (Eq, Ord, Show, Generic, NFData, Functor, Foldable, Traversable)
 
-    -- print ("is same", sort nodes == sort nodes')
-    -- print ("len", length nodes, length nodes')
+type LutKey a = (Ord a)
 
-    return ()
+empty :: Lut a b
+empty = Lut Map.empty
+{-# INLINE empty #-}
 
-isCallExpr :: IR.Tree -> Bool
-isCallExpr a | IR.getNodeType a == IR.CallExpr = True
-isCallExpr _ = False
+singleton :: LutKey a => a -> b -> Lut a b
+singleton k v = Lut $ Map.singleton k v
+{-# INLINE singleton #-}
+
+fromList :: LutKey a => [(a,b)] -> Lut a b
+fromList xs = Lut $ Map.fromList xs
+{-# INLINE fromList #-}
+
+fromListWith :: LutKey a => (b -> b -> b) -> [(a,b)] -> Lut a b
+fromListWith f xs = Lut $ Map.fromListWith f xs
+{-# INLINE fromListWith #-}
+
+insert :: LutKey a => a -> b -> Lut a b -> Lut a b
+insert k v (Lut m) = Lut $ Map.insert k v m
+{-# INLINE insert #-}
+
+insertWith :: LutKey a => (b -> b -> b) -> a -> b -> Lut a b -> Lut a b
+insertWith f k v (Lut m) = Lut $ Map.insertWith f k v m
+{-# INLINE insertWith #-}
+
+delete :: LutKey a => a -> Lut a b -> Lut a b
+delete k (Lut m) = Lut $ Map.delete k m
+{-# INLINE delete #-}
+
+lookup :: LutKey a => a -> Lut a b -> Maybe b
+lookup k (Lut m) = Map.lookup k m
+{-# INLINE lookup #-}
+
+member :: LutKey a => a -> Lut a b -> Bool
+member k (Lut m) = isJust $ Map.lookup k m
+{-# INLINE member #-}
