@@ -175,14 +175,18 @@ int main(int argc, char** argv) {
 	if(!backend) { return 1; }
 	auto targetCode = backend->convert(program);
 
-	// dump source file if requested, exit if requested
-	frontend::path filePath = commonOptions.dumpTRG;
-	if(!commonOptions.dumpTRGOnly.empty()) { filePath = commonOptions.dumpTRGOnly; }
-	if(!filePath.empty()) {
-		std::cout << "Dumping target code ...\n";
+	// dump target code
+	{
+		frontend::path filePath = commonOptions.outFile;
+		// we append a suffix with the same extension to the output filename if we shouldn't stop after dumping
+		if(!commonOptions.dumpTRGOnly) {
+			filePath = filePath.concat(std::string("_generated") + (commonOptions.outFile.has_extension() ? commonOptions.outFile.extension().string() : ""));
+		}
+		std::cout << "Dumping target code to " << filePath << " ...\n";
 		std::ofstream out(filePath.string());
 		out << *targetCode;
-		if(!commonOptions.dumpTRGOnly.empty()) { return 0; }
+		// and exit if requested
+		if(commonOptions.dumpTRGOnly) { return 0; }
 	}
 
 	// Step 4: build output code
