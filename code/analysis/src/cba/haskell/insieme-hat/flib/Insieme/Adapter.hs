@@ -180,7 +180,7 @@ initializeContext context_c dump_c size_c = do
 mkSolverStats :: StablePtr Ctx.Context -> IO (StablePtr SS.SolverStats)
 mkSolverStats ctx_hs = do
     ctx <- deRefStablePtr ctx_hs
-    gcStats <- bool (pure Nothing) (Just <$> getGCStats) =<< getGCStatsEnabled
+    gcStats <- bool (pure Nothing) (Just <$> getRTSStats) =<< getRTSStatsEnabled
     let stats = SS.solverStats (Ctx.getSolverState ctx) gcStats
     newStablePtr stats
 

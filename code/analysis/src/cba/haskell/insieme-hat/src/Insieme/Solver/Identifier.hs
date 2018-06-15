@@ -42,6 +42,7 @@ module Insieme.Solver.Identifier where
 import Prelude hiding (lookup,print)
 import Data.Dynamic
 import Data.Function
+import Data.Typeable
 import Data.Hashable
 
 import           Data.ByteString.Char8 (ByteString)

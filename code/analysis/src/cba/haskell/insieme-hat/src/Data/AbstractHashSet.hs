@@ -14,7 +14,4 @@ import Data.Function
 
 type Set = HashSet
 type SetKey a = (Eq a, Hashable a)
-
-instance Ord a => Ord (HashSet a) where
-    compare = compare `on` toList
     

@@ -91,7 +91,9 @@ getGHCVersion =
     dropWhileEnd isSpace <$> readProcess "ghc" ["--numeric-version"] ""
 
 parseComp "%library" = Lib
-parseComp ('%':'c':'o':'m':'p':':':comp) = (OtherComp comp)
+parseComp ('%':'e':'x':'e':':':comp) = (OtherComp 'x' comp)
+parseComp ('%':'f':'l':'i':'b':':':comp) = (OtherComp 'f' comp)
+-- parseComp ('%':'c':'o':'m':'p':':':comp) = (OtherComp 'f' comp)
 
 main :: IO ()
 main = do
@@ -116,7 +118,7 @@ exec compBuildDir' = do
   pkg_ver  <- getPackageVersion cabal_file
 
   let distdir = builddir </> "dist-newstyle"
-      dir = compBuildDir' distdir pkg_name pkg_ver (OtherComp cmd)
+      dir = compBuildDir' distdir pkg_name pkg_ver (OtherComp 'x' cmd)
 
   exitWith =<< rawSystem (dir </> cmd) args
 
@@ -134,20 +136,22 @@ haddock compDistDir' = do
   void $ rawSystem "cp" ["-av", dir </> "doc" , builddir]
   putStrLn dir
 
-data Comp = Lib | OtherComp CompName
+data Comp = Lib | OtherComp { cType :: CompTy, cName :: CompName }
+
+type CompTy = Char
 
 compBuildDir, compDistDir
     :: (String, String, String) -> Version -> FilePath -> PkgName -> Version -> Comp -> FilePath
 
 compBuildDir sys ghc_ver builddir pkg_name pkg_ver Lib =
     libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
-compBuildDir sys ghc_ver builddir pkg_name pkg_ver (OtherComp comp) =
-    normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver comp
+compBuildDir sys ghc_ver builddir pkg_name pkg_ver (OtherComp ty comp) =
+    normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver comp ty
 
 compDistDir sys ghc_ver builddir pkg_name pkg_ver Lib =
     libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
-compDistDir sys ghc_ver builddir pkg_name pkg_ver (OtherComp comp) =
-    normCompDistDir sys ghc_ver builddir pkg_name pkg_ver comp
+compDistDir sys ghc_ver builddir pkg_name pkg_ver (OtherComp ty comp) =
+    normCompDistDir sys ghc_ver builddir pkg_name pkg_ver comp ty
 
 
 normCompBuildDir, normCompDistDir :: (String, String, String)
@@ -156,17 +160,18 @@ normCompBuildDir, normCompDistDir :: (String, String, String)
              -> PkgName
              -> Version
              -> CompName
+             -> CompTy
              -> FilePath
-normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver comp_name =
+normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver comp_name ty =
   libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
-    </> "c"
+    </> [ty]
     </> comp_name
     </> "build"
     </> comp_name
 
-normCompDistDir sys ghc_ver builddir pkg_name pkg_ver comp_name =
+normCompDistDir sys ghc_ver builddir pkg_name pkg_ver comp_name ty =
   libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
-    </> "c"
+    </> [ty]
     </> comp_name
 
 libCompBuildDir
