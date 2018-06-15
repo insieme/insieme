@@ -10,6 +10,7 @@ curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
 inherit_chained
+lazy_evaluation
 member_data_pointer
 memb_func_ptr
 rec_memberfunc_pointer
