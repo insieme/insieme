@@ -197,7 +197,7 @@ createEqualityConstraint myDependingOn limit trg =
         a1 = set a0 trg (value `merge` current)
 
         value = limit fa      -- the value from the constraint
-        current = get' a1 trg -- the current value in the assignment
+        current = get' a0 trg -- the current value in the assignment
 
     check state
           -- perfect, it is equal!

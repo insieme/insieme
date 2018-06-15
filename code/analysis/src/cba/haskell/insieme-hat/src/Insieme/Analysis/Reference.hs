@@ -53,6 +53,9 @@ module Insieme.Analysis.Reference (
 import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
+import Data.Hashable
+import Data.AbstractSet (Set, SetKey)
+import Data.AbstractSet as Set
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -92,7 +95,7 @@ data Reference i =
       }
     | NullReference
     | UninitializedReference
-  deriving (Eq,Ord,Show,Generic,NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 
 --
@@ -100,13 +103,13 @@ data Reference i =
 --
 
 newtype ReferenceSet i = ReferenceSet { unRS :: BSet.UnboundSet (Reference i) }
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
-instance (Eq i,Ord i,Show i,Typeable i,NFData i) => Lattice (ReferenceSet i) where
+instance (SetKey i, Show i, Typeable i, NFData i) => Lattice (ReferenceSet i) where
     bot = ReferenceSet BSet.empty
     (ReferenceSet x) `merge` (ReferenceSet y) = ReferenceSet $ BSet.union x y
 
-instance (Eq i,Ord i,Show i,Typeable i,NFData i) => ExtLattice (ReferenceSet i) where
+instance (SetKey i, Show i, Typeable i, NFData i) => ExtLattice (ReferenceSet i) where
     top = ReferenceSet $ BSet.Universe
 
 

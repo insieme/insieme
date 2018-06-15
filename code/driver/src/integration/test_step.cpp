@@ -218,9 +218,9 @@ namespace integration {
 
 				string outputDir = test.getOutputDirectory().string();
 
-				// source-to-source compilation only
 				setup.outputFile = outputDir + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
-				cmd << " --dump-trg-only " << setup.outputFile;
+				// source-to-source compilation only
+				cmd << " --dump-trg-only";
 
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
 				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";

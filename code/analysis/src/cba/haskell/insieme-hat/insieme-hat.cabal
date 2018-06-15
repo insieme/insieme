@@ -8,7 +8,7 @@ build-type:         Simple
 cabal-version:      >= 1.10
 
 library
-    ghc-options:        -Wall -Wno-name-shadowing -Wno-type-defaults -Wno-unused-do-bind
+    ghc-options:        -Wall -Wno-name-shadowing -Wno-type-defaults -Wno-unused-do-bind -Wno-unused-imports
                         -O2 -optc-O3
 
     if flag(profiling)
@@ -18,6 +18,15 @@ library
 
     build-tools:        c2hs
     exposed-modules:
+                        Data.AbstractHashMap,
+                        Data.AbstractHashMap.Lazy,
+                        Data.AbstractHashMap.Strict,
+                        Data.AbstractHashSet,
+                        Data.AbstractMap,
+                        Data.AbstractMap.Lazy,
+                        Data.AbstractMap.Orphan,
+                        Data.AbstractMap.Strict,
+                        Data.AbstractSet,
                         Insieme.Adapter.Utils,
                         Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
@@ -119,6 +128,7 @@ library
     -- for hashconsing
     build-depends:      hashtables
     exposed-modules:    Insieme.Inspire.IR.HashCons
+                        Insieme.Inspire.IR.HCMap
 
 foreign-library insieme-hat
     type:               native-shared

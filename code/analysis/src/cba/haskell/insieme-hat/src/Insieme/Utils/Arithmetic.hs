@@ -46,6 +46,7 @@ module Insieme.Utils.Arithmetic where
 import Control.Applicative
 import Control.DeepSeq
 import Data.List hiding (product)
+import Data.Hashable
 import Data.Maybe
 import Data.Ord
 import GHC.Generics (Generic)
@@ -57,7 +58,7 @@ import Prelude hiding (exponent, product)
 -- | Something like @-2 * x^2 * y^3 + 5 * z^1@ where @c@ denotes the type of
 -- coefficients and exponents, and @v@ the type of variables.
 data Formula c v = Formula { terms :: [Term c v] }
-  deriving (Eq, Ord, Generic, NFData)
+  deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance Functor (Formula c) where
     fmap f = Formula . map (fmap f) . terms
@@ -191,7 +192,7 @@ modFormula' x y = Formula $ map (modTerm c) $ terms x
 -- * Numeric Order
 
 data NumOrdering = NumLT | NumEQ | NumGT | Sometimes
-  deriving (Eq, Ord, Enum, Read, Show)
+  deriving (Eq, Ord, Enum, Read, Show, Generic, Hashable)
 
 class NumOrd a where
     numCompare :: a -> a -> NumOrdering
@@ -221,7 +222,7 @@ compareFactor = comparing base
 -- | Something like @x^2@.
 data Factor c v = Factor { base     :: v,
                            exponent :: c }
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Functor (Factor c) where
     fmap f (Factor b e) = Factor (f b) e
@@ -236,7 +237,7 @@ convertFactor (Factor b e) = Factor b (fromIntegral e)
 
 -- | Something like @x^2 * y^3@.
 data Product c v = Product { factors :: [Factor c v] }
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Functor (Product c) where
     fmap f = Product . map (fmap f) . factors
@@ -262,7 +263,7 @@ convertProduct = Product . map convertFactor . factors
 -- | Something like @-2 * x^2 * y^3@.
 data Term c v = Term { coeff   :: c,
                        product :: Product c v}
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Functor (Term c) where
     fmap f (Term c ps) = Term c (fmap f ps)

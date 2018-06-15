@@ -405,8 +405,10 @@ memoryLocations ctx_hs expr_hs = do
 
 -- ** Arithmetic
 
-type ArithmeticFormula = Ar.Formula CLong ArithmeticValue
-type ArithmeticTerm = Ar.Term CLong ArithmeticValue
+type CLong' = Int64
+
+type ArithmeticFormula = Ar.Formula CLong' ArithmeticValue
+type ArithmeticTerm = Ar.Term CLong' ArithmeticValue
 type ArithmeticProduct = Ar.Product CInt ArithmeticValue
 type ArithmeticFactor = Ar.Factor CInt ArithmeticValue
 

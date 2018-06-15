@@ -51,6 +51,7 @@ module Insieme.Analysis.Entities.SymbolicFormula (
 ) where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -66,7 +67,7 @@ data Symbol = Constant {getNode :: IR.Tree,
                         getAddr :: NodeAddress }
             | Variable {getNode :: IR.Tree,
                         getAddr :: NodeAddress }
-  deriving (Generic, NFData)
+  deriving (Generic, NFData, Hashable)
 
 instance Eq Symbol where
     x == y = (getNode x) == (getNode y)

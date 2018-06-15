@@ -58,6 +58,10 @@ data Tree = MkTree {
       mtInnerTree :: {-# UNPACK#-} !(HC InnerTree)
     } deriving (Show, Eq, Ord, Generic, NFData, Hashable)
 
+instance HashConsed Tree where
+    hcdId (MkTree _ hc) = hcId hc
+    {-# INLINE hcdId #-}
+
 instance NodeReference Tree where
     child i  = (!!i) . children
     children = getChildren
@@ -66,7 +70,7 @@ data InnerTree = InnerTree {
       itNodeType    :: !NodeType,
       itChildren    :: ![Tree],
       itBuiltinTags :: ![String]
-    } deriving (Eq, Show, Generic, NFData, Hashable, Ord)
+    } deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance HashCons InnerTree where
 

@@ -55,6 +55,7 @@ module Insieme.Analysis.Entities.AccessPath (
 ) where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.FieldIndex
 import qualified Insieme.Analysis.Entities.DataPath as DP
@@ -67,7 +68,7 @@ import qualified Insieme.Inspire as IR
 data BaseVar =
           Parameter Int
         | Global IR.Tree
-    deriving (Eq,Ord,Generic,NFData)
+    deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance Show BaseVar where
     show (Parameter i) = "p" ++ (show i)
@@ -77,7 +78,7 @@ data AccessPath i =
           AccessPath BaseVar [DP.DataPath i]
         | Local
         | Unknown
-    deriving (Eq,Ord,Generic,NFData)
+    deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance (Show i) => Show (AccessPath i) where
     show (AccessPath b s) = (show b) ++ (concat $ (++ ".*") . tail . show <$> reverse s) ++ ")"

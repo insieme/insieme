@@ -59,7 +59,9 @@ ex1_subst n =
     nodeWithBuiltinTags [ ex1 n, ex1 n, ex1 n ] []
 
 -- | Singleton substitution
-a |-> b = HashMap.fromList [(a,b)]
+(|->) a b c
+    | c == a = b
+    | otherwise = c
 
 transformTests =
     testGroup "Transform" $ concat
@@ -84,8 +86,8 @@ transformTests =
         ]
 
 identityTests n (msg, ex, disj) = testGroup ("identity tests with "++msg)
-    [ testCase "Empty subst yields identity" $
-          substitute HashMap.empty (ex n) @?~ ex n
+    [ testCase "Identity subst yields identity" $
+          substitute id (ex n) @?~ ex n
     , testCase "Identity susbt yields identity" $
           substitute (nil n |-> nil n) (ex n) @?~ ex n
     , testCase "Disjunct subst yields identity" $

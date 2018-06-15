@@ -41,23 +41,21 @@
 module Insieme.Inspire.Visit.NodeMap where
 
 import Control.Monad.State
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
+import Insieme.Inspire.IR.HCMap (HCMap)
+import qualified Insieme.Inspire.IR.HCMap as HCMap
 import Prelude hiding (map)
 
 import qualified Insieme.Inspire.IR.Tree as IR
-import Insieme.Inspire.IR.HashCons
 
-data NodeMap a = NodeMap { nmIdMap :: IntMap a }
+newtype NodeMap a = NodeMap (HCMap IR.Tree a)
 
 mkNodeMap :: IR.Tree -> NodeMap IR.Tree
-mkNodeMap node = NodeMap $ execState (buildMap node) $ IntMap.empty
+mkNodeMap node = NodeMap $ execState (buildMap node) $ HCMap.empty
   where
-    buildMap :: IR.Tree -> State (IntMap IR.Tree) ()
+    buildMap :: IR.Tree -> State (HCMap IR.Tree IR.Tree) ()
     buildMap n = do
-      let i = hcId $ IR.mtInnerTree n
-      whenM (not . IntMap.member i <$> get) $ do
-           modify $ IntMap.insert i n
+      whenM (not . HCMap.member n <$> get) $ do
+           modify $ HCMap.insert n n
            mapM_ buildMap $ IR.getChildren n
 
     whenM :: Monad m => m Bool -> m () -> m ()
@@ -65,20 +63,9 @@ mkNodeMap node = NodeMap $ execState (buildMap node) $ IntMap.empty
       b <- cond
       when b a
 
-mkNodeMap'Naive :: IR.Tree -> NodeMap IR.Tree
-mkNodeMap'Naive n = NodeMap $ go n
-  where
-    go n = insert n $ IntMap.unions $ fmap go $ IR.getChildren n
-
-    insert n =
-        case IR.getID n of
-          Just i  -> IntMap.insert i n
-          Nothing -> id
-
 lookup :: IR.Tree -> NodeMap a -> Maybe a
-lookup   n NodeMap { nmIdMap } =
-    let i = hcId $ IR.mtInnerTree n in
-    IntMap.lookup i nmIdMap
+lookup   n (NodeMap m) =
+    HCMap.lookup n m
 
 instance Functor NodeMap where
     fmap = mapNodeMap

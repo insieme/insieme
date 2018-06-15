@@ -45,6 +45,7 @@ import Control.DeepSeq
 import Data.List
 import Data.Maybe
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -66,7 +67,7 @@ data Callable =
       Lambda NodeAddress
     | Literal NodeAddress
     | Closure NodeAddress
- deriving (Eq, Ord, Generic, NFData)
+ deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance Show Callable where
     show (Lambda na) = "Lambda@" ++ (I.prettyShow na)

@@ -47,7 +47,6 @@ module Insieme.Analysis.RecursiveLambdaReferences (
 ) where
 
 import Data.Typeable
-import qualified Data.Set as Set
 
 import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as I
@@ -57,9 +56,15 @@ import Insieme.Solver
 
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Hashable
 
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
+
+import Data.AbstractSet (Set, SetKey)
+import qualified Data.AbstractSet as Set
+import Data.AbstractMap.Lazy (Map, MapKey)
+import qualified Data.AbstractMap.Lazy as Map
 
 import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
 
@@ -68,8 +73,8 @@ import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
 -- * the lattice of this analysis
 --
 
-newtype LambdaReferenceSet = LambdaReferenceSet { unLRS :: Set.Set NodeAddress }
-  deriving (Eq, Ord, Show, Generic, NFData)
+newtype LambdaReferenceSet = LambdaReferenceSet { unLRS :: Set NodeAddress }
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Lattice LambdaReferenceSet where
     bot = LambdaReferenceSet Set.empty
@@ -122,8 +127,8 @@ recursiveCalls addr = case Q.getNodeType addr of
 -- * the lattice of this analysis
 --
 
-newtype RecursiveLambdaReferenceIndex = RecursiveLambdaReferenceIndex (Map.Map I.Tree (Map.Map I.Tree [NodeAddress]))
-  deriving (Eq, Ord, Generic, NFData)
+newtype RecursiveLambdaReferenceIndex = RecursiveLambdaReferenceIndex (Map I.Tree (Map I.Tree [NodeAddress]))
+  deriving (Eq, Generic, NFData, Hashable)
 
 instance Show RecursiveLambdaReferenceIndex where
     show _ = "RecursiveLambdaReferenceIndex{ .. }"
@@ -213,15 +218,15 @@ indexRecursiveLambdaReferences :: I.Tree -> RecursiveLambdaReferenceIndex
 indexRecursiveLambdaReferences root = RecursiveLambdaReferenceIndex index
   where
     -- the resulting index
-    index :: Map.Map I.Tree (Map.Map I.Tree [NodeAddress])
+    index :: Map I.Tree (Map I.Tree [NodeAddress])
     index = foldr go Map.empty $ Map.keys refIndex
       where
         -- only interested in lambda definitions
-        go :: I.Tree -> Map.Map I.Tree (Map.Map I.Tree [NodeAddress]) -> Map.Map I.Tree (Map.Map I.Tree [NodeAddress])
+        go :: I.Tree -> Map I.Tree (Map I.Tree [NodeAddress]) -> Map I.Tree (Map I.Tree [NodeAddress])
         go t res | I.getNodeType t /= I.LambdaDefinition = res
         go t cur = res
           where
-            res :: Map.Map I.Tree (Map.Map I.Tree [NodeAddress])
+            res :: Map I.Tree (Map I.Tree [NodeAddress])
             res = Map.insert t indexed cur
 
             -- get full list of references
@@ -234,13 +239,13 @@ indexRecursiveLambdaReferences root = RecursiveLambdaReferenceIndex index
                     Just refSet = Map.lookup (I.node a) refIndex
 
             -- an indexed version of the references (ref->addresses)
-            indexed :: Map.Map I.Tree [NodeAddress]
+            indexed :: Map I.Tree [NodeAddress]
             indexed = foldr go Map.empty references
               where
                 go a = Map.insertWith (++) (I.node a) [a]
 
     -- an index of all tag type reference addresses
-    refIndex :: Map.Map I.Tree NodeAddressSet
+    refIndex :: Map I.Tree NodeAddressSet
     refIndex = Map.fromList $ foldr (:) [] resultMap
       where
         resultMap = go <$> NodeMap.mkNodeMap root

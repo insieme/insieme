@@ -43,6 +43,7 @@ module Insieme.Analysis.Identifier where
 
 import Control.DeepSeq
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Solver as Solver
@@ -59,7 +60,7 @@ import Insieme.Analysis.Entities.FieldIndex
 --
 
 data Identifier = Identifier String
-    deriving (Eq, Ord, Generic, NFData)
+    deriving (Eq, Ord, Generic, NFData, Hashable)
 
 
 instance Show Identifier where

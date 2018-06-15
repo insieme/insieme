@@ -48,6 +48,8 @@ namespace transform {
 
 	DeclarationPtr materialize(const ExpressionPtr& value);
 
+	CallExprPtr materializeCall(const CallExprPtr& call);
+
 	struct LambdaIngredients {
 		VariableList params;
 		StatementPtr body;

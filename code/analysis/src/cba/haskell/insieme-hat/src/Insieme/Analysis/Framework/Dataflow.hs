@@ -67,8 +67,8 @@ import Data.Foldable
 import Data.Maybe
 import Data.Typeable
 import Debug.Trace
-import qualified Data.Set as Set
-
+import Data.AbstractSet (Set, SetKey)
+import qualified Data.AbstractSet as Set
 
 import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as I
@@ -176,7 +176,7 @@ dataflowValue addr analysis ops = case I.getNode addr of
 
         callTargetVal a = ComposedValue.toValue $ Solver.get a callTargetVar
 
-        filterInterceptedLambdas ts = Set.filter (not . covered) (BSet.toSet ts)
+        filterInterceptedLambdas ts = BSet.toSet $ BSet.filter (not . covered) ts
             where
                 covered (Callable.Lambda addr) = any (\o -> covers o addr) extOps
                 covered _ = False

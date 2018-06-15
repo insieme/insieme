@@ -62,6 +62,7 @@ module Insieme.Analysis.Entities.FieldIndex (
 import Control.DeepSeq
 import Data.Int
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Utils.Arithmetic
@@ -69,7 +70,7 @@ import Insieme.Utils.ParseInt
 
 import qualified Data.Set as Set
 
-class (Eq v, Ord v, Show v, Typeable v, NFData v) => FieldIndex v where
+class (Eq v, Ord v, Show v, Hashable v, Typeable v, NFData v) => FieldIndex v where
         
         -- interface for integration in composed value trees
         join :: [v] -> [v] -> Maybe [v]
@@ -120,7 +121,7 @@ data SimpleFieldIndex =
 
         | UnknownIndex                        -- the index is not known
 
-    deriving(Eq,Ord,Typeable,Generic,NFData)
+    deriving(Eq, Ord, Typeable, Generic, NFData, Hashable)
 
 instance Show SimpleFieldIndex where
     show (StructField s)       = s

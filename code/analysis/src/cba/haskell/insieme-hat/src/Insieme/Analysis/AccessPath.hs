@@ -43,6 +43,7 @@ module Insieme.Analysis.AccessPath where
 
 import Control.DeepSeq (NFData)
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -66,7 +67,7 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 --
 
 newtype AccessPathSet i = AccessPathSet { unAPS :: BSet.BoundSet BSet.Bound10 (AP.AccessPath i) }
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance (FieldIndex i) => Solver.Lattice (AccessPathSet i) where
     bot = AccessPathSet BSet.empty

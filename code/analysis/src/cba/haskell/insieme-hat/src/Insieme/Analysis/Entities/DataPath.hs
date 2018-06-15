@@ -51,6 +51,7 @@ module Insieme.Analysis.Entities.DataPath (
 ) where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.FieldIndex
 
@@ -59,7 +60,7 @@ import Insieme.Analysis.Entities.FieldIndex
 --
 
 data Direction = Up | Down
-  deriving (Eq,Ord,Generic,NFData)
+  deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance Show Direction where
     show Up   = "↑"
@@ -75,7 +76,7 @@ data DataPath i =
           Root
         | DataPath (DataPath i) Direction i
         | Invalid
-  deriving (Eq,Ord,Generic,NFData)
+  deriving (Eq, Ord, Generic, NFData, Hashable)
 
 
 instance (Show i) => Show (DataPath i) where

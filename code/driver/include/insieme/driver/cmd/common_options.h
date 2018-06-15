@@ -54,8 +54,7 @@ namespace cmd {
 		bool checkSema = false;
 		frontend::path outFile;
 		frontend::path dumpIR;
-		frontend::path dumpTRG;
-		frontend::path dumpTRGOnly;
+		bool dumpTRGOnly;
 
 		void addFlagsAndParameters(OptionParser& parser) {
 			parser.addFlag(     "compile,c",               compileOnly,                                   "compilation only");
@@ -63,8 +62,7 @@ namespace cmd {
 			parser.addFlag(     "check-sema-only",         checkSemaOnly,                                 "run semantic checks on the generated IR and stop afterwards");
 			parser.addParameter("outfile,o",               outFile,           frontend::path("a.out"),    "output file");
 			parser.addParameter("dump-ir",                 dumpIR,            frontend::path(),           "dump intermediate representation");
-			parser.addParameter("dump-trg",                dumpTRG,           frontend::path(),           "dump target code");
-			parser.addParameter("dump-trg-only",           dumpTRGOnly,       frontend::path(),           "dump target code and stop afterwards");
+			parser.addFlag(     "dump-trg-only",           dumpTRGOnly,                                   "dump target code only and stop afterwards. The code will be dumped to the output file");
 		}
 	};
 
