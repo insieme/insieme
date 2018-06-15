@@ -35,6 +35,11 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Insieme.Solver.Assignment 
     ( Assignment(..)
     , empty
@@ -46,12 +51,18 @@ module Insieme.Solver.Assignment
 import Control.DeepSeq
 import Data.Dynamic
 import Data.Maybe
+import Type.Reflection
 
 import           Data.AbstractSet (Set)
 import qualified Data.AbstractSet as Set
 
-import {-# SOURCE #-} Insieme.Solver.Var
+import           Data.AbstractMap (Map, MapKey)
+import qualified Data.AbstractMap as Map
 
+import           Data.TyMap (TyMap)
+import qualified Data.TyMap as TyMap
+
+import {-# SOURCE #-} Insieme.Solver.Var
 
 import           Insieme.Solver.VarMap (VarMap)
 import qualified Insieme.Solver.VarMap as VarMap
@@ -62,7 +73,7 @@ import qualified Insieme.Solver.VariableIndex as VariableIndex
 
 -- Assignments ----------------------------------------------
 
-newtype Assignment = Assignment (VarMap Dynamic)
+data Assignment = Assignment TyMap
 
 -- instance Show Assignment where
 --     show a@(Assignment m) = "Assignment {\n\t"
@@ -74,25 +85,35 @@ newtype Assignment = Assignment (VarMap Dynamic)
 --             vars = keys m
 
 empty :: Assignment
-empty = Assignment VarMap.empty
+empty = Assignment TyMap.empty
 
--- retrieves a value from the assignment
+-- | retrieves a value from the assignment
+--
 -- if the value is not present, the bottom value of the variable will be returned
-get' :: (Typeable a) => Assignment -> TypedVar a -> a
-get' (Assignment m) (TypedVar v) =
-        fromJust $ (fromDynamic :: ((Typeable a) => Dynamic -> (Maybe a)) ) $ maybeValToBottom v (VarMap.lookup v m)
-
+get' :: forall a. Typeable a => Assignment -> TypedVar a -> a
+get' (Assignment m) (TypedVar v) = maybeValToBottom v $ do
+  let rep = typeRep @(VarMap a)
+  vm <- TyMap.lookup rep m
+  VarMap.lookup v vm
 
 -- updates the value for the given variable stored within the given assignment
-set :: (Typeable a, NFData a) => Assignment -> TypedVar a -> a -> Assignment
-set (Assignment a) (TypedVar v) d = Assignment (VarMap.insert v (toDyn d) a)
-
+set :: forall a. Typeable a => Assignment -> TypedVar a -> a -> Assignment
+set (Assignment m) (TypedVar v) d = Assignment $
+    let rep = typeRep @(VarMap a) in
+    TyMap.insertWith VarMap.union rep (VarMap.singleton v d) m
 
 -- resets the values of the given variables within the given assignment
 reset :: Assignment -> Set IndexedVar -> Assignment
-reset (Assignment m) vars = Assignment $ VarMap.insertAll reseted m
-    where
-        reseted = go <$> Set.toList vars
+reset (Assignment m) vars = Assignment $ foldr go m botVars
+
+  where 
+    go :: (Var, Dynamic) -> TyMap -> TyMap
+    go (v, Dynamic rep a) =
+        TyMap.insertWith VarMap.union (App (typeRep @VarMap) rep) (VarMap.singleton v a)
+
+    botVars :: [(Var, Dynamic)]
+    botVars = map go $ Set.toList vars
+      where
         go iv = (v, bottom v)
-            where
-                v = VariableIndex.ivVar iv
+          where
+            v = VariableIndex.ivVar iv

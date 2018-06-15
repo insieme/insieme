@@ -38,11 +38,14 @@
 module Insieme.Solver.VarMap 
     ( VarMap
     , empty
+    , singleton
+    , fromList
     , lookup
     , insert
     , insertAll
     , keys
     , keysSet
+    , union
     ) where
 
 import           Data.HashMap.Strict (HashMap)
@@ -60,13 +63,21 @@ newtype VarMap a = VarMap (HashMap Var a)
 empty :: VarMap a
 empty = VarMap HashMap.empty
 
+singleton :: Var -> a -> VarMap a
+singleton k v = VarMap $ HashMap.singleton k v
+
 lookup :: Var -> VarMap a -> Maybe a
 lookup k (VarMap m) = HashMap.lookup k m
 
 insert :: Var -> a -> VarMap a -> VarMap a
 insert k v (VarMap m) = VarMap $ HashMap.insert k v m
 
-insertAll :: [(Var,a)] -> VarMap a -> VarMap a
+fromList :: [(Var, a)] -> VarMap a
+fromList kvs = foldr go empty kvs
+  where
+    go (k,v) m = insert k v m
+
+insertAll :: [(Var, a)] -> VarMap a -> VarMap a
 insertAll kvs (VarMap m) = VarMap $ foldr go m kvs
   where
     go (k,v) m = HashMap.insert k v m
@@ -76,3 +87,8 @@ keys (VarMap m) = HashMap.keys m
 
 keysSet :: VarMap a -> Set Var
 keysSet (VarMap m) = Set.fromList $ HashMap.keys m
+
+
+-- | Remember: left biased
+union :: VarMap a -> VarMap a -> VarMap a
+union (VarMap a) (VarMap b) = VarMap $ HashMap.union a b

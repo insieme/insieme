@@ -28,6 +28,7 @@ library
                         Data.AbstractMap.Strict,
                         Data.AbstractSet,
                         Data.AbstractLut,
+                        Data.TyMap
                         Insieme.Adapter.Utils,
                         Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
