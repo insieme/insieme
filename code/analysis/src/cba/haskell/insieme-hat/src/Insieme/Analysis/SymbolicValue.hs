@@ -231,6 +231,23 @@ genericSymbolicValue' slice_functions userDefinedAnalysis addr = case getNodeTyp
         valueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
         valueVal a = extract $ Solver.get a valueVar
 
+    -- handle tuple expressions
+    IR.TupleExpr -> var   -- integrated for enums, since those are composed directly
+      where
+        var = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createConstraint dep val var
+
+        dep _ = Solver.toVar <$> valueVars
+        val a = compose $ BSet.map (Builder.mkTuple tupletype) components
+          where
+            tupletype = Addr.getNode $ Addr.goDown 0 addr
+            -- res = BSet.map (IR.mkTuple ()) components
+            components = BSet.cartProductL values
+            values = extract . (Solver.get a) <$> valueVars
+
+        valueVars = variableGenerator userDefinedAnalysis <$> Addr.children (Addr.goDown 1 addr)
+
+
     -- handle materializing return statements to produce constructor calls
     IR.ReturnStmt -> var
       where
@@ -303,11 +320,12 @@ genericSymbolicValue' slice_functions userDefinedAnalysis addr = case getNodeTyp
                         "ref_new", "ref_new_init",
                         "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast",
                          "ref_reinterpret",
-                        "num_cast"
+                        "num_cast",
+                        "enum_to_int", "enum_from_int"
                      ] || any (isOperator a) [
                         "IMP_std_colon__colon_array::IMP__operator_subscript_",
                         "IMP_std_colon__colon_array::IMP_at"
-                     ] || isConstructor a 
+                     ] || isConstructor a
             -- literal builtins to ignore
             toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign", "ref_decl" ]
 
@@ -340,7 +358,7 @@ genericSymbolicValue' slice_functions userDefinedAnalysis addr = case getNodeTyp
             trg = Addr.getNode $ if isInstantiated then instantiateCall else callTrg
               where
 
-                isInstantiated = Addr.depth callTrg > 2 
+                isInstantiated = Addr.depth callTrg > 2
                     && getNodeType instantiateCall == IR.CallExpr
                     && any (isBuiltin $ Addr.goDown 1 instantiateCall) ["instantiate_fun","instantiate_ctor","instantiate_dtor","instantiate_member"]
 
@@ -386,7 +404,7 @@ genericSymbolicValue' slice_functions userDefinedAnalysis addr = case getNodeTyp
             append x = Builder.deref ext
               where
                 base = if isReference x then x else IR.child 1 $ IR.child 2 x
-                
+
                 ext = case f of
                     (StructField field)   -> Builder.refMember base field
                     (UnionField field)    -> Builder.refMember base field
@@ -400,5 +418,3 @@ genericSymbolicValue' slice_functions userDefinedAnalysis addr = case getNodeTyp
 
     extract = unSVS . ComposedValue.toValue
     compose = ComposedValue.toComposed . SymbolicValueSet
-
-

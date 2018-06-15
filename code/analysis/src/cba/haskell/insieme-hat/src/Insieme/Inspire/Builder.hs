@@ -48,6 +48,8 @@ module Insieme.Inspire.Builder (
     mkTypeLiteralType,
     mkTypeLiteral,
 
+    mkTuple,
+
     plus,
     plusOne,
 
@@ -93,7 +95,7 @@ mkCallWithArgs :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
 mkCallWithArgs t f args = mkCall t f $ toDecl <$> args
   where
     toDecl a = mkDeclaration t a
-      where 
+      where
         Just t = Q.getType a
 
 mkIdentifier :: String -> IR.Tree
@@ -108,6 +110,10 @@ mkTypeLiteralType t = IR.mkNode IR.GenericType [name, parents, params] []
 
 mkTypeLiteral :: IR.Tree -> IR.Tree
 mkTypeLiteral t = mkLiteral "type_literal" $ mkTypeLiteralType t
+
+
+mkTuple :: IR.Tree -> [IR.Tree] -> IR.Tree
+mkTuple t es = IR.mkNode IR.TupleExpr [t, IR.mkNode IR.Expressions es []] []
 
 
 -- arithmetic operator calls --

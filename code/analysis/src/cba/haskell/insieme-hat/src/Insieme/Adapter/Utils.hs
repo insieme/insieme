@@ -75,6 +75,8 @@ pprintTree (I.Node (I.UIntValue   v) _) = show v
 pprintTree (I.Node I.Literal [_,v]) = pprintTree v
 pprintTree (I.Node I.Variable [_,i]) = "v" ++ pprintTree i
 pprintTree (I.Node I.CallExpr (_:f:args) ) = (pprintTree f) ++ "(" ++ (intercalate "," $ pprintTree <$> args) ++ ")"
+pprintTree (I.Node I.TupleExpr [_,I.Node I.Expressions es]) = "[" ++ (intercalate "," $ pprintTree <$> es) ++ "]"
+
 
 -- handle derived built-ins
 --pprintTree n@(I.Node (I.LambdaExpr) _) | I.isaBuiltin n = head $ I.builtinTags n
@@ -85,4 +87,4 @@ pprintTree (I.Node I.Declaration [_,v]) = pprintTree v
 
 
 -- everything else
-pprintTree (I.Node n _) = "<some " ++ show n ++ " node>"
+pprintTree (I.Node n _) = "some " ++ show n ++ " node"

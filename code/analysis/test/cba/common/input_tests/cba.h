@@ -105,7 +105,7 @@ void cba_expect_one_of_ptr(int a, _pset* b) {};
 
 	// symbolic value
 	template<typename T>
-	void cba_expect_symbolic_value(const char*, T);
+	void cba_expect_symbolic_value(const char*, T) {};
 
 #endif
 
