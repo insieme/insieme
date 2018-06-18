@@ -248,6 +248,7 @@ namespace frontend {
 			LO.Exceptions = 1;
 			LO.CXXExceptions = 1;
 			LO.Bool = 1;
+			LO.InstantiationDepth = 1024;
 		} else {
 			LO.CPlusPlus = 0;
 		}
