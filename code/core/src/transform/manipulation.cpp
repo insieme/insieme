@@ -293,6 +293,9 @@ namespace transform {
 			// check for bind expression ...
 			if(target->getNodeType() == NT_BindExpr) { return tryInlineBindToExpr(manager, call); }
 
+			// skip non-plain functions
+			if (!target->getType().as<FunctionTypePtr>()->isPlain()) return call;
+
 			// check for lambda ...
 			if(target->getNodeType() == NT_LambdaExpr) {
 				lambda = static_pointer_cast<const LambdaExpr>(target);

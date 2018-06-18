@@ -1,24 +1,22 @@
 
-class Matrix {
+struct Vec {
 
-	int nrows;
-	int ncols;
+	int s;
 
-  public:
-	Matrix(int r, int c) : nrows(r), ncols(c) {}
+	Vec(int s) : s(s) {}
 
-	bool sameSize(const Matrix& mat) const {
-		return 0 == 0 && (ncols == mat.ncols);
+	bool sameSize(const Vec& v) const {
+		return 0 == 0 && (s == v.s);
 	}
 };
 
 int main() {
 
-	Matrix a(0, 0), b(0, 0);
+	Vec a(0), b(0);
 	0 == 0 && a.sameSize(b);
 
-	const Matrix& ar = a;
-	const Matrix& br = b;
+	const Vec& ar = a;
+	const Vec& br = b;
 	0 == 0 && ar.sameSize(br);
 
 	return 0;
