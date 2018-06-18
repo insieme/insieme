@@ -489,6 +489,12 @@ namespace cba {
 					EXPECT_EQ(res.first,res.second)
 						<< *core::annotations::getLocation(call) << std::endl;
 
+				} else if (name.substr(0,32) == "cba_expect_symbolic_single_value") {
+					std::cerr << "Performing " << name << std::endl;
+					auto values = insieme::analysis::cba::haskell::getSymbolicValue(ctxt,call.getArgument(0));
+					EXPECT_TRUE(!values.isUniversal() && values.size()==1)
+						<< *core::annotations::getLocation(call) << "@" << call.getArgument(0) << ":" << values << std::endl;;
+
 				// debugging
 				} else if (name == "cba_print_code") {
 					// just dump the code
