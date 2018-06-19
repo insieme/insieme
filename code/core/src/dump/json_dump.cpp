@@ -44,6 +44,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include "insieme/core/annotations/source_location.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/utils/character_escaping.h"
 
@@ -78,6 +79,8 @@ namespace json {
 		for(auto& node : nodes) {
 			ptree e;
 			e.put<string>("Kind", toString(node->getNodeType()));
+
+			if(auto location = annotations::getLocation(node)) e.put<string>("sloc", toString(*location));
 
 			if(auto val = node.isa<ValuePtr>()) e.put<string>("Value", toString(val->getValue()));
 
