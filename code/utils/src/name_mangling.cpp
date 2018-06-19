@@ -118,6 +118,7 @@ namespace utils {
 			{"/", "_slash_"},
 			{"-", "_minus_"},
 			{"~", "_wave_"},
+			{"!", "_negation_"},
 			{manglePrefix, "_not_really_an_imp_philipp_what_are_you_talking_about_sorry_"},
 			{mangleLocation, "_not_really_mangle_location_"},
 			{mangleEmpty, "_not_really_mangle_empty_"}
