@@ -412,7 +412,7 @@ dataflowValue addr analysis ops = case I.getNode addr of
 
     instantiateHandler = OperatorHandler cov dep val
         where
-            cov a = any (isBuiltin a) ["instantiate_fun","instantiate_ctor","instantiate_dtor","instantiate_member"]
+            cov = isGenericFunctionInstantiator
 
             dep _ _ = [Solver.toVar valueVar]
 

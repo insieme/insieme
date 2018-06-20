@@ -70,7 +70,13 @@ module Insieme.Analysis.Utils.CppSemantic (
     getImplicitDestructorBodies,
 
     -- a utility to identify side-effect free builtin operators
-    isSideEffectFreeBuiltin
+    isSideEffectFreeBuiltin,
+
+    -- a utility to identify template instantiations
+    isGenericFunctionInstantiation,
+
+    -- a test for statically bound calls
+    isStaticBoundCall
 
 ) where
 
@@ -92,7 +98,7 @@ hasMoreReferences _ _ = False
 isCtorBasedConversion' :: ReferenceKind -> I.Tree -> I.Tree -> Bool
 isCtorBasedConversion' refKind srcType trgType | isReference srcType && isReference trgType =
     -- if the source reference is a plain, but the target not, an implicit constructor is called
-    (srcRefKind == refKind) && (trgRefKind == RK_Plain) && (not $ isReference srcObjType) && (not $ isReference trgObjType)
+    (srcRefKind == refKind) && (trgRefKind == RK_Plain) && (not $ isReference srcObjType) && (not $ isReference trgObjType) && ((isTagType trgObjType) || (isGenericType trgObjType) || (isTypeVariable trgObjType))
   where
     srcRefKind = getReferenceKind srcType
     trgRefKind = getReferenceKind trgType
@@ -286,3 +292,23 @@ isSideEffectFreeBuiltin addr = any (Q.isBuiltin addr)
           "bool_not",
           "num_cast"
         ]
+
+
+isGenericFunctionInstantiation :: NodeLike a => a -> Bool
+isGenericFunctionInstantiation addr = case I.node addr of
+    (I.Node I.CallExpr ( _ : fun : _ )) -> isGenericFunctionInstantiator fun
+    _ -> False
+
+
+isStaticBoundCall :: NodeLike a => a -> Bool
+isStaticBoundCall a = case I.getNodeType node of
+    I.CallExpr ->
+        case I.getNodeType $ I.child 1 node of
+            I.LambdaExpr      -> False
+            I.BindExpr        -> False
+            I.Literal         -> False
+            I.LambdaReference -> False
+            _                  -> not (isGenericFunctionInstantiation $ I.child 1 node)
+    _ -> False
+  where
+    node = I.node a

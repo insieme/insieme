@@ -103,6 +103,12 @@ getType n | kind == IR.Type        = Just $ n
     kind = IR.toNodeKind ntyp
 
 
+isGenericType :: NodeLike a => a -> Bool
+isGenericType n = (getNodeType n) == IR.GenericType
+
+isTypeVariable :: NodeLike a => a -> Bool
+isTypeVariable n = (getNodeType n) == IR.TypeVariable
+
 
 -- *** Function Type
 
@@ -443,3 +449,9 @@ hasMaterializingTag n = IR.hasMaterializingTag $ node n
 
 isOperator :: (NodeLike a) => a -> String -> Bool
 isOperator a n = fromMaybe False $ (==n) <$> getLiteralValue a
+
+
+-- ** Generic Function Instantiators
+
+isGenericFunctionInstantiator :: (NodeLike a) => a -> Bool
+isGenericFunctionInstantiator n = any (isBuiltin n) ["instantiate_fun","instantiate_ctor","instantiate_dtor","instantiate_member"]

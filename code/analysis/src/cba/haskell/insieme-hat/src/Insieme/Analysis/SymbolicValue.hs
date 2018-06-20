@@ -361,7 +361,7 @@ genericSymbolicValue' slice_functions userDefinedAnalysis addr = case getNodeTyp
 
                 isInstantiated = Addr.depth callTrg > 2
                     && getNodeType instantiateCall == IR.CallExpr
-                    && any (isBuiltin $ Addr.goDown 1 instantiateCall) ["instantiate_fun","instantiate_ctor","instantiate_dtor","instantiate_member"]
+                    && (isGenericFunctionInstantiator $ Addr.goDown 1 instantiateCall)
 
                 instantiateCall = Addr.goUp $ Addr.goUp callTrg
 

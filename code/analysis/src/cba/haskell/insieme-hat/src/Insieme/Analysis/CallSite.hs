@@ -54,6 +54,7 @@ import qualified Insieme.Query as Q
 import qualified Insieme.Utils.BoundSet as BSet
 
 import Insieme.Analysis.DynamicCallSites
+import Insieme.Analysis.Utils.CppSemantic
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
 import qualified Insieme.Solver as Solver
@@ -99,9 +100,6 @@ callSites addr = case Q.getNodeType addr of
         I.BindExpr -> addr
         _           -> error "unhandled CallSite enclosing expression"
 
-    i = I.getIndex e
-    p = fromJust $ I.getParent e
-
     isCall a = Q.getNodeType a == I.CallExpr
 
 
@@ -112,9 +110,9 @@ callSites addr = case Q.getNodeType addr of
     -- create the variable (by binding at least the id) --
     var = Solver.mkVariable (idGen addr) cons Solver.bot
 
-    cons    = if I.isRoot addr then [initc] else [con,initc]
+    cons    = if I.isRoot e then [initc] else [con,initc]
     initc   = Solver.constant initial var
-    initial = if I.isRoot addr then Solver.bot else directCall
+    initial = if I.isRoot e then Solver.bot else directCall
 
 
     -- assemble the constraint computing all call sites --
@@ -131,12 +129,29 @@ callSites addr = case Q.getNodeType addr of
     recReferencesVal a = if isLambda then Solver.get a recReferencesVar else Solver.bot
     recReferencesDep   = if isLambda then [recReferencesVar] else []
 
+    -- determines whether a given target function is statically bound in its context
+    getStaticCall t = case () of
+        _ | isDirectStaticCallTarget t       -> Just p1
+          | isInstantiatedStaticCallTarget t -> Just p3
+          | otherwise                        -> Nothing
+      where
+
+        -- it is so, if directly called
+        isDirectStaticCallTarget t = I.getIndex t == 1 && isCall p1
+
+        -- if if it is instantiated and directly called
+        isInstantiatedStaticCallTarget t = I.depth t > 3 && I.getIndex t == 1 && I.getIndex p1 == 2 && I.getIndex p2 == 1 && isGenericFunctionInstantiation p2
+
+        p1 = fromJust $ I.getParent t     -- the surrounding call or declaration
+        p2 = fromJust $ I.getParent p1    -- the init call
+        p3 = fromJust $ I.getParent p2    -- the actull call
+
+    isStaticCallTarget t = case getStaticCall t of
+        Just _ -> True
+        Nothing -> False
 
     -- determines whether all calls are statically bound (if not, we have to search) --
-    isStaticallyBound a = i == 1 && isCall p && all check (RecLambdaRefs.unLRS $ recReferencesVal a)
-      where
-        check x = I.getIndex x == 1 && (isCall $ fromJust $ I.getParent x)
-
+    isStaticallyBound a = isStaticCallTarget e && all isStaticCallTarget (RecLambdaRefs.unLRS $ recReferencesVal a)
 
     -- the list of call site variables to be checked for potential calls to this lambda
     callSiteVars a =
@@ -157,11 +172,13 @@ callSites addr = case Q.getNodeType addr of
         p a = (I.numChildren a) == 2 + numParams
         peel (CallSite a) = a
 
-    directCall = if i == 1 && isCall p then Set.singleton $ CallSite p else Set.empty
+    directCall = case getStaticCall e of
+        Just p -> Set.singleton $ CallSite p
+        Nothing -> Set.empty
 
     indirectCalls a =
         Set.fromList $ if isStaticallyBound a
-            then CallSite . fromJust . I.getParent <$> Set.toList (RecLambdaRefs.unLRS $ recReferencesVal a)
+            then CallSite . fromJust . getStaticCall <$> Set.toList (RecLambdaRefs.unLRS $ recReferencesVal a)
             else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
       where
 
@@ -174,6 +191,6 @@ callSites addr = case Q.getNodeType addr of
                 I.BindExpr -> Callable.Closure addr
                 _           -> error "unexpected NodeType"
 
-        directRecursiveCalls = fromJust . I.getParent <$> (filter f $ Set.toList $ RecLambdaRefs.unLRS $ recReferencesVal a)
+        directRecursiveCalls = fromJust . getStaticCall <$> (filter f $ Set.toList $ RecLambdaRefs.unLRS $ recReferencesVal a)
           where
-            f r = I.getIndex r == 1 && isCall (fromJust $ I.getParent r)
+            f = isStaticCallTarget

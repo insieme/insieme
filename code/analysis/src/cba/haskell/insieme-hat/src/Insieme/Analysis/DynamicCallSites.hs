@@ -47,6 +47,7 @@ import Data.Typeable
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
+import Insieme.Analysis.Utils.CppSemantic
 import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 
@@ -104,18 +105,7 @@ dynamicCalls addr = case Q.getNodeType addr of
     var = Solver.mkVariable (idGen addr) [con] Solver.bot
     con = Solver.constant allCalls var
 
-    allCalls = Set.fromList $ CallSite <$> I.collectAllPrune dynamicBoundCall skipTypes (I.getRootAddress addr)
+    allCalls = Set.fromList $ CallSite <$> I.collectAllPrune isStaticBoundCall skipTypes (I.getRootAddress addr)
       where
-        dynamicBoundCall node = case I.getNodeType node of
-            I.CallExpr ->
-                case I.getNodeType $ I.getChildren node !! 1 of
-                    I.LambdaExpr      -> False
-                    I.BindExpr        -> False
-                    I.Literal         -> False
-                    I.LambdaReference -> False
-                    _                  -> True
-            _ -> False
-        
         -- NOTE: this is a simplification, since types may contain functions with dynamically bound calls
         skipTypes node = if Q.isType node then I.PruneHere else I.NoPrune
-
