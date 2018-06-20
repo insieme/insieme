@@ -38,6 +38,7 @@
 #include "insieme/frontend/utils/conversion_test_utils.h"
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
+#include "insieme/frontend/extensions/std_move_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -145,6 +146,14 @@ namespace frontend {
 	TEST(CppConversionTest, Static) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static.cpp"); }
 
 	TEST(CppConversionTest, StaticDataMember) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static_data_member.cpp"); }
+
+	TEST(CppConversionTest, StdMove) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_std_move.cpp", [](ConversionJob& job) {
+			// Requires std::move- and interceptor extension (test extension needs to be last)
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+			job.registerFrontendExtension<extensions::StdMoveExtension, extensions::InterceptorExtension>();
+		});
+	}
 
 	TEST(CppConversionTest, TemplateDeclInstantiation) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_template_decl_instantiation.cpp"); }
 

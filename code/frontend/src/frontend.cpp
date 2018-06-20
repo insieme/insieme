@@ -65,6 +65,7 @@
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
 #include "insieme/frontend/extensions/opencl_frontend_extension.h"
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
+#include "insieme/frontend/extensions/std_move_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 #include "insieme/frontend/extensions/variable_length_array_extension.h"
@@ -248,7 +249,10 @@ namespace frontend {
 	void ConversionJob::registerExtensionFlags(boost::program_options::options_description& options) {
 		// register all plugins
 
-		// interceptor wants to be first
+		// mapping std::move wants to be done first
+		registerFrontendExtension<extensions::StdMoveExtension>(options);
+
+		// interceptor wants to be first actually, but std::move has to be mapped even earlier
 		registerFrontendExtension<extensions::InterceptorExtension>(options);
 
 		// intrinsics support wants to come up front too, to get high priority for kidnapped headers
