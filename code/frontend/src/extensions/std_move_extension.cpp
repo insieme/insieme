@@ -41,6 +41,7 @@
 #include "insieme/frontend/converter.h"
 
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace frontend {
@@ -51,8 +52,14 @@ namespace extensions {
 			if(auto namedDecl = llvm::dyn_cast_or_null<clang::NamedDecl>(clangCall->getCalleeDecl())) {
 				if(namedDecl->getQualifiedNameAsString() == "std::move") {
 					const auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-					const auto& arg = converter.convertExpr(clangCall->getArg(0));
-					assert_true(core::lang::isReference(arg));
+					auto arg = converter.convertExpr(clangCall->getArg(0));
+
+					// special handling for value parameters, which are de-refed here
+					if(!core::lang::isReference(arg) && refExt.isCallOfRefDeref(arg)) {
+						arg = core::analysis::getArgument(arg, 0);
+					}
+					assert_true(core::lang::isReference(arg)) << "Argument " << arg << " to std::move is not a reference type";
+
 					core::ExpressionPtr callee;
 					if(core::lang::isPlainReference(arg)) callee = refExt.getRefMovePlain();
 					else if(core::lang::isCppReference(arg)) callee = refExt.getRefMoveReference();
