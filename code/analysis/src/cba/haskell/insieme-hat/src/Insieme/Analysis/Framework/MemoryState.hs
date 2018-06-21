@@ -630,8 +630,8 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                 var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
 
-                dep a = Solver.toVar funVar : case () of
-                        _ | noFuns a    -> []                -- wait until there are some target functions (optimization)
+                dep a = (if isAssign then [] else [Solver.toVar funVar]) ++ case () of
+                        _ | not isAssign && noFuns a -> []                -- wait until there are some target functions (optimization)
                           | mayAssign a -> refs : case () of
                                 _ | noRefs a  -> []             -- wait until there are some references (optimization)
                                   | hitsLoc a -> []             -- it is a hit, we don't need the predecessor
@@ -651,13 +651,15 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                     where
                         predVals = predecessorVal a
 
+                -- optimize for the frequent case of static bound ref-assing operations
+                isAssign = Q.isBuiltin (I.goDown 1 addr) "ref_assign"
 
                 funVar = callableValue $ I.goDown 1 addr
                 funVal a = ComposedValue.toValue $ Solver.get a funVar
 
                 noFuns a = BSet.null $ funVal a
 
-                mayAssign a = BSet.isUniverse funs || (any assign funs)
+                mayAssign a = isAssign || BSet.isUniverse funs || (any assign funs)
                     where
                         funs = funVal a
                         assign c = isRefAssign || isCtor
@@ -735,11 +737,10 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         defaultVar = programPointValue pp idGen analysis []
 
-        isAssignCandidate = res || isExplicitCopyOrMoveConstructorCall addr
+        isAssignCandidate = mayBeAssign || isExplicitCopyOrMoveConstructorCall addr
             where
-                res = (not isNotRef) && I.numChildren addr == 4 && unitRes && refParam
                 fun = I.goDown 1 addr
-                isNotRef = Q.isaBuiltin fun && not (Q.isBuiltin fun "ref_assign")
+                mayBeAssign = Q.isBuiltin fun "ref_assign" || (I.numChildren addr == 4 && unitRes && refParam && isDynamicBoundCall addr)
                 unitRes  = Q.isUnit $ I.getNode addr
                 refParam = Q.isReference $ I.getNode $ I.goDown 1 $ I.goDown 2 addr
 
