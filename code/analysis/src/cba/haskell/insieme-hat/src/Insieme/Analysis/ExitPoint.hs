@@ -39,7 +39,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Insieme.Analysis.ExitPoint where
+module Insieme.Analysis.ExitPoint (
+
+  ExitPoint(..),
+  ExitPointSet,
+
+  exitPointAnalysis,
+  exitPoints
+
+) where
 
 import Control.DeepSeq
 import qualified Data.Set as Set
@@ -99,7 +107,7 @@ exitPoints addr = case Q.getNodeType addr of
             var = Solver.mkVariable id [con] Solver.bot
             con = Solver.createConstraint dep val var
 
-            dep a = (Solver.toVar endOfBodyReachable) : (map Solver.toVar (getReturnReachVars a))
+            dep a = (Solver.toVar returnsVar) : (Solver.toVar endOfBodyReachable) : (map Solver.toVar (getReturnReachVars a))
             val a = exits
                 where
                     exits =
@@ -107,20 +115,26 @@ exitPoints addr = case Q.getNodeType addr of
                         then Set.insert (ExitPoint body) reachableReturns
                         else reachableReturns
 
-                    reachableReturns = foldr go Set.empty returns
+                    reachableReturns = foldr go Set.empty (pairs a)
                         where
-                            go = \r s ->
-                                if Reachable.toBool $ Solver.get a (Reachable.reachableIn r)
+                            go = \(r,v) s ->
+                                if Reachable.toBool $ Solver.get a v
                                 then Set.insert (ExitPoint r) s
                                 else s
 
-            returns = collectReturns addr
+            returnsVar = localExitPoints $ I.crop addr
 
-            getReturnReachVars _ = map Reachable.reachableIn returns
+            returns a = I.append addr . peel <$> (Set.toList $ Solver.get a returnsVar)
+
+            getReturnReachVars a = map Reachable.reachableIn (returns a)
+
+            pairs a = zip (returns a) (getReturnReachVars a)
 
             body = (I.goDown 2 addr)
 
             endOfBodyReachable = Reachable.reachableOut body
+
+            peel (ExitPoint e) = e
 
 
     -- for bind expressions: use nested call expression
@@ -135,6 +149,37 @@ exitPoints addr = case Q.getNodeType addr of
 
 
 
+
+--
+-- * Local ExitPoint Analysis
+-- Computes the static exit points of single lambdas to cache those in assignments.
+--
+
+data LocalExitPointAnalysis = LocalExitPointAnalysis
+    deriving (Typeable)
+
+localExitPointAnalysis :: Solver.AnalysisIdentifier
+localExitPointAnalysis = Solver.mkAnalysisIdentifier LocalExitPointAnalysis "LEP"
+
+
+--
+-- * Local ExitPoint Variable Generator
+--
+
+localExitPoints :: NodeAddress -> Solver.TypedVar ExitPointSet
+localExitPoints addr = case () of
+    _ | I.isRoot addr && Q.getNodeType addr == I.Lambda -> var
+      | otherwise -> error "Local exit point analysis can only be applied on lambdas."
+  where
+    var = Solver.mkVariable id [con] Solver.bot
+    con = Solver.constant returns var
+
+    returns = Set.fromList $ ExitPoint <$> collectReturns addr
+
+    id = Solver.mkIdentifierFromExpression localExitPointAnalysis addr
+
+
+-- The actual collector of return statements in lambdas.
 collectReturns :: NodeAddress -> [NodeAddress]
 collectReturns = I.collectAllPrune pred prune
   where
