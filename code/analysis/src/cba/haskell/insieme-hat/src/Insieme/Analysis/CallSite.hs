@@ -129,6 +129,16 @@ callSites addr = case Q.getNodeType addr of
     recReferencesVal a = if isLambda then Solver.get a recReferencesVar else Solver.bot
     recReferencesDep   = if isLambda then [recReferencesVar] else []
 
+
+    -- the list of call site variables to be checked for potential calls to this lambda
+    callSiteVars a = case () of
+      _ | isStaticallyBound a -> []
+        | isLazyArgument      -> Callable.callableValue . (I.goDown 1) <$> lazyArgumentCallSites
+        | otherwise           -> Callable.callableValue . (I.goDown 1) <$> allCalls a
+
+
+    ---- Handling static calls ----
+
     -- determines whether a given target function is statically bound in its context
     getStaticCall t = case () of
         _ | isDirectStaticCallTarget t       -> Just p1
@@ -146,28 +156,45 @@ callSites addr = case Q.getNodeType addr of
         p2 = fromJust $ I.getParent p1    -- the init call
         p3 = fromJust $ I.getParent p2    -- the actull call
 
-    isStaticCallTarget t = case getStaticCall t of
-        Just _ -> True
-        Nothing -> False
+    isStaticCallTarget t = isJust $ getStaticCall t
 
     -- determines whether all calls are statically bound (if not, we have to search) --
     isStaticallyBound a = isStaticCallTarget e && all isStaticCallTarget (RecLambdaRefs.unLRS $ recReferencesVal a)
 
-    -- the list of call site variables to be checked for potential calls to this lambda
-    callSiteVars a =
-        if isStaticallyBound a then []
-        else Callable.callableValue . (I.goDown 1) <$> allCalls a
+
+    ---- Special handling: Lazy Operator Arguments ----
+
+    -- determine whether this callable is the argument of a lazy operator (not included in dynamic all site list)
+    isLazyArgument = isJust enclosingLazyOperator
+
+    enclosingLazyOperator = if isLazyArgument then Just lazyOperator else Nothing
+      where
+        enclosingCall = fromJust $ I.getParent =<< I.getParent e
+        isLazyArgument = Q.isCallOfAnyBuiltin ["bool_and","bool_or","ite"] enclosingCall
+        lazyOperator = I.child 1 enclosingCall
+
+    lazyArgumentCallSites = case enclosingLazyOperator of
+        Just op -> callsIn op
+        Nothing -> []
+      where
+        callsIn op = I.collectAllPrune isDynamicBoundCall skipTypes op
+          where
+            skipTypes node = if Q.isType node then I.PruneHere else I.NoPrune
+
+
+
+    ---- Generic handling of all remaining dynamically bound callables ----
 
     -- add the all-calls variable dependency in case the processed function is not statically bound
     allCallsVars a =
-        if isStaticallyBound a then []
+        if isStaticallyBound a || isLazyArgument then []
         else [allCallsVar]
 
     -- computes a list of addresses of all potentiall call sites
     allCallsVar = dynamicCalls $ I.getRootAddress addr
     allCallsVal a = Solver.get a allCallsVar
 
-    allCalls a = filter p $ peel <$> (Set.toList $ allCallsVal a)
+    allCalls a = if isLazyArgument then [] else filter p $ peel <$> (Set.toList $ allCallsVal a)
       where
         p a = (I.numChildren a) == 2 + numParams
         peel (CallSite a) = a
@@ -177,12 +204,12 @@ callSites addr = case Q.getNodeType addr of
         Nothing -> Set.empty
 
     indirectCalls a =
-        Set.fromList $ if isStaticallyBound a
-            then CallSite . fromJust . getStaticCall <$> Set.toList (RecLambdaRefs.unLRS $ recReferencesVal a)
-            else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
+        Set.fromList $ case () of
+          _ | isStaticallyBound a -> CallSite . fromJust . getStaticCall <$> Set.toList (RecLambdaRefs.unLRS $ recReferencesVal a)
+            | otherwise -> (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
       where
 
-        reachingCalls = filter f $ allCalls a
+        reachingCalls = filter f $ (allCalls a ++ lazyArgumentCallSites)
           where
             f c = BSet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ I.goDown 1 c
 

@@ -103,9 +103,17 @@ dynamicCalls addr = case Q.getNodeType addr of
     idGen = Solver.mkIdentifierFromExpression dynamicCallsAnalysis
 
     var = Solver.mkVariable (idGen addr) [con] Solver.bot
-    con = Solver.constant allCalls var
+    con = Solver.constant allNonLazyOpCalls var
 
-    allCalls = Set.fromList $ CallSite <$> I.collectAllPrune isStaticBoundCall skipTypes (I.getRootAddress addr)
+    allCalls = Set.fromList $ CallSite <$> I.collectAllPrune isDynamicBoundCall skipTypes (I.getRootAddress addr)
       where
         -- NOTE: this is a simplification, since types may contain functions with dynamically bound calls
         skipTypes node = if Q.isType node then I.PruneHere else I.NoPrune
+
+    allNonLazyOpCalls = Set.filter f allCalls
+      where
+        f (CallSite a) = not inLazyOp
+          where
+            inLazyOp = case getEnclosingLambda a of
+              Just f -> any (I.isBuiltin $ I.node f) ["bool_and","bool_or","ite"]
+              Nothing -> False

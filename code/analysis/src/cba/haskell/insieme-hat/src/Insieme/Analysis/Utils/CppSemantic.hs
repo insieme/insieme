@@ -75,8 +75,11 @@ module Insieme.Analysis.Utils.CppSemantic (
     -- a utility to identify template instantiations
     isGenericFunctionInstantiation,
 
-    -- a test for statically bound calls
-    isStaticBoundCall
+    -- a test for dynamic bound calls
+    isDynamicBoundCall,
+
+    -- obtains the lambda enclosing an IR node
+    getEnclosingLambda
 
 ) where
 
@@ -300,8 +303,8 @@ isGenericFunctionInstantiation addr = case I.node addr of
     _ -> False
 
 
-isStaticBoundCall :: NodeLike a => a -> Bool
-isStaticBoundCall a = case I.getNodeType node of
+isDynamicBoundCall :: NodeLike a => a -> Bool
+isDynamicBoundCall a = case I.getNodeType node of
     I.CallExpr ->
         case I.getNodeType $ I.child 1 node of
             I.LambdaExpr      -> False
@@ -312,3 +315,10 @@ isStaticBoundCall a = case I.getNodeType node of
     _ -> False
   where
     node = I.node a
+
+
+getEnclosingLambda :: NodeAddress -> Maybe NodeAddress
+getEnclosingLambda s = case () of
+    _ | getNodeType s == I.Lambda -> Just s
+      | I.isRoot s                -> Nothing
+      | otherwise                 -> getEnclosingLambda $ fromJust $ I.getParent s

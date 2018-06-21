@@ -405,6 +405,14 @@ isCallOf fun n = case node n of
     _ -> False
 
 
+isCallOfAny :: (NodeLike a, NodeLike b) => [b] -> a -> Bool
+isCallOfAny funs n = any (flip isCallOf $ n) funs
+
+isCallOfAnyBuiltin :: (NodeLike a) => [String] -> a -> Bool
+isCallOfAnyBuiltin funs n = case node n of
+  IR.Node IR.CallExpr (_ : f : _ ) -> any (isBuiltin f) funs
+  _ -> False
+
 isCallOfRefTempInit :: NodeLike a => a -> Bool
 isCallOfRefTempInit = isCallOf refTempInit
 
