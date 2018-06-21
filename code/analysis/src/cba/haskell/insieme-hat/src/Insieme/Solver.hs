@@ -40,6 +40,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
+-- {-# Strict -} causes +15% mem and +10% runtime
 
 module Insieme.Solver (
 
@@ -151,8 +152,6 @@ import Insieme.Solver.Statistics
 newtype Dependencies = Dependencies (IntMap (Set IndexedVar))
         deriving Show
 
--- (HashMap IndexedVar (Set IndexedVar))
-
 emptyDep :: Dependencies
 emptyDep = Dependencies IntMap.empty
 
@@ -261,14 +260,14 @@ solveStep (SolverState !a !i u t r) d (v:vs) =
           (a', None)      -> (a', ni, nd, nv, numResets)
 
           -- add depending variables to work list
-          (a', Increment) -> (a', ni, nd, uv ++ nv, numResets)
+          (!a', Increment) -> (a', ni, nd, uv ++ nv, numResets)
         
           -- handling a local reset
           (a', Reset)     -> (ra, ni, nd, uv ++ nv, numResets+1)
             where
               dep = getAllDep nd trg
             
-              ra | not (Set.member trg dep) = 
+              !ra | not (Set.member trg dep) = 
                      -- if variable is not indirectly depending on itself reset
                      -- all depending variables to their bottom value
                      reset a' dep 

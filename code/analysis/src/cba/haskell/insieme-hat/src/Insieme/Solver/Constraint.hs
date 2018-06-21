@@ -36,6 +36,7 @@
  -}
 
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE Strict #-}
 
 module Insieme.Solver.Constraint
     ( Constraint(..)

@@ -35,10 +35,10 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE Strict #-}
 
 module Insieme.Solver.Assignment 
     ( Assignment(..)
@@ -73,7 +73,7 @@ import qualified Insieme.Solver.VariableIndex as VariableIndex
 
 -- Assignments ----------------------------------------------
 
-data Assignment = Assignment TyMap
+newtype Assignment = Assignment TyMap
 
 -- instance Show Assignment where
 --     show a@(Assignment m) = "Assignment {\n\t"
@@ -105,7 +105,6 @@ set (Assignment m) (TypedVar v) d = Assignment $
 -- resets the values of the given variables within the given assignment
 reset :: Assignment -> Set IndexedVar -> Assignment
 reset (Assignment m) vars = Assignment $ foldr go m botVars
-
   where 
     go :: (Var, Dynamic) -> TyMap -> TyMap
     go (v, Dynamic rep a) =
