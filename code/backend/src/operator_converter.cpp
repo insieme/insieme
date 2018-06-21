@@ -822,13 +822,21 @@ namespace backend {
 
 		// -- std::move --
 
-		res[refExt.getRefMove()] = OP_CONVERTER {
+		res[refExt.getRefMovePlain()] = OP_CONVERTER {
+			// signature of operation:
+			//		(i : ref<'a,f,f,plain>) -> ref<'a,f,f,cpp_rref>
+			ADD_HEADER("utility");
+			return c_ast::call(C_NODE_MANAGER->create("std::move"), c_ast::deref(CONVERT_ARG(0)));
+		};
+		res[refExt.getRefMoveReference()] = OP_CONVERTER {
 			// signature of operation:
 			//		(i : ref<'a,f,f,cpp_ref>) -> ref<'a,f,f,cpp_rref>
-
 			ADD_HEADER("utility");
 			return c_ast::call(C_NODE_MANAGER->create("std::move"), CONVERT_ARG(0));
 		};
+		// signature of operation:
+		//		(i : ref<'a,f,f,cpp_rref>) -> ref<'a,f,f,cpp_rref>
+		res[refExt.getRefMoveRValueReference()] = res[refExt.getRefMoveReference()];
 
 		// -- others --
 

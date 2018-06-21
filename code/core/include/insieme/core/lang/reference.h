@@ -320,9 +320,11 @@ namespace lang {
 		// -- std::move --
 
 		/**
-		 * A generic post-order decrement operator.
+		 * std::move
 		 */
-		LANG_EXT_DERIVED(RefMove, "(i : ref<'a,f,f,cpp_ref>) -> ref<'a,f,f,cpp_rref> { return ref_kind_cast(i, type_lit(cpp_rref)); }")
+		LANG_EXT_DERIVED(RefMovePlain,           "(i : ref<'a,f,f,plain>)    -> ref<'a,f,f,cpp_rref> { return ref_kind_cast(i, type_lit(cpp_rref)); }")
+		LANG_EXT_DERIVED(RefMoveReference,       "(i : ref<'a,f,f,cpp_ref>)  -> ref<'a,f,f,cpp_rref> { return ref_kind_cast(i, type_lit(cpp_rref)); }")
+		LANG_EXT_DERIVED(RefMoveRValueReference, "(i : ref<'a,f,f,cpp_rref>) -> ref<'a,f,f,cpp_rref> { return i; }")
 
 	};
 

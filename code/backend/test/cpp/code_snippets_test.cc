@@ -369,12 +369,17 @@ namespace backend {
 	TEST(CppSnippet, RefMove) {
 		DO_TEST(R"(
 			int<4> function IMP_main() {
-				var ref<int<4>> i;
-				ref_move(ref_kind_cast(i, type_lit(cpp_ref)));
+				var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				var ref<int<4>,f,f,cpp_rref> v1 = ref_move_plain(v0);
+				var ref<int<4>,f,f,cpp_ref> v2 = ref_kind_cast(v0, type_lit(cpp_ref));
+				var ref<int<4>,f,f,cpp_rref> v3 = ref_move_reference(v2);
+				var ref<int<4>,f,f,cpp_rref> v4 = ref_move_r_value_reference(v3);
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "std::move(i);");
+			EXPECT_PRED2(containsSubString, code, "std::move(v0);");
+			EXPECT_PRED2(containsSubString, code, "std::move(v2);");
+			EXPECT_PRED2(containsSubString, code, "std::move(v3);");
 		})
 	}
 
