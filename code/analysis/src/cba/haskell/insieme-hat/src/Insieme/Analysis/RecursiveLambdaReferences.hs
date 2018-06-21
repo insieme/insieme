@@ -60,6 +60,7 @@ import Data.Hashable
 
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
+import GHC.Stack
 
 import Data.AbstractSet (Set, SetKey)
 import qualified Data.AbstractSet as Set
@@ -93,12 +94,12 @@ data RecursiveLambdaReferenceAnalysis = RecursiveLambdaReferenceAnalysis
 -- * the constraint generator
 --
 
-recursiveCalls :: NodeAddress -> TypedVar LambdaReferenceSet
+recursiveCalls :: HasCallStack => NodeAddress -> TypedVar LambdaReferenceSet
 recursiveCalls addr = case Q.getNodeType addr of
 
         I.Lambda | I.depth addr >= 3 -> var
-
-        _ -> error "Can only compute recursive calls for lambdas with sufficient context!"
+        ty -> error $ "Can only compute recursive calls for lambdas with sufficient context! "
+                     ++ show (ty, addr)
 
     where
 
@@ -139,8 +140,7 @@ instance Lattice RecursiveLambdaReferenceIndex where
       _ | Map.null a -> RecursiveLambdaReferenceIndex b
         | Map.null b -> RecursiveLambdaReferenceIndex a
         | a == b -> RecursiveLambdaReferenceIndex a
-        | otherwise  -> undefined
-
+        | otherwise -> error "RecursiveLambdaReferenceIndex collision"
 
 getRecursiveReferences :: RecursiveLambdaReferenceIndex -> NodeAddress -> [NodeAddress]
 getRecursiveReferences _ lambda | I.depth lambda <= 2 = []
