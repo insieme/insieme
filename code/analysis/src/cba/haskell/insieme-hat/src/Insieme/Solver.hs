@@ -111,6 +111,7 @@ import System.CPUTime
 import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
+import Debug.Trace
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Aeson as A
@@ -238,8 +239,9 @@ solveStep s _ [] = s                                                            
 
 -- compute next element in work list
 
-solveStep (SolverState !a !i u t r) d (v:vs) =
-    solveStep (SolverState resAss resIndex nu nt nr) resDep ds
+solveStep (SolverState !a !i u t r c) d (v:vs) =
+    (if c `mod` 10000 == 0 then trace (show ("solver iter", c)) else id) $
+    solveStep (SolverState resAss resIndex nu nt nr (c+1)) resDep ds
   where
     -- profiling --
     ((resAss,resIndex,resDep,ds,numResets),dt) = measure go ()
@@ -319,7 +321,7 @@ escape str = concat $ escape' <$> str
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
+toDotGraph (SolverState a@(Assignment _) varIndex _ _ _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
