@@ -382,6 +382,11 @@ namespace annotations {
 	}
 
 	/**
+	 * Obtains the full stack of locations leading to the node at the given address.
+	 */
+	std::vector<Location> getLocationStack(const NodeAddress& addr);
+
+	/**
 	 * Returns a string representation of the most precise location which can be found for "n".
 	 */
 	template <typename T>

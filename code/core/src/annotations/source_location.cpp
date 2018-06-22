@@ -265,6 +265,24 @@ LocationOpt getLocation(const NodeAddress& node) {
 	return getLocation(node.getParentAddress());
 }
 
+std::vector<Location> getLocationStack(const NodeAddress& addr) {
+	NodeAddress cur = addr;
+	std::vector<Location> res;
+	if (!cur) return res;
+	while(true) {
+
+		// collect the current location
+		auto loc = getLocation(cur);
+		if (loc) res.push_back(*loc);
+
+		// go to next
+		cur = cur.getParentAddress();
+		if (cur.isRoot()) return res;
+	}
+
+}
+
+
 LocationOpt getLocation(const NodePtr& node) {
 	return getLocation(NodeAddress(node));
 }
