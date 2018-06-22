@@ -148,6 +148,7 @@ namespace utils {
 				"#include <string>\n"
 				"#include <array>\n"
 				"#include <vector>\n"
+				"#include <map>\n"
 				+ header + "\n"
 				"int main() { " + type + " x; }\n";
 
