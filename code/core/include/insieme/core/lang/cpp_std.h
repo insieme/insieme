@@ -103,6 +103,25 @@ namespace lang {
 	TypePtr getStdVectorElementType(const NodePtr& node);
 
 
+	// --------------------- std::map ---------------------------
+
+	/**
+	 * Determines whether the given type or expression is a std::map.
+	 */
+	bool isStdMap(const NodePtr& node);
+
+	/**
+	 * Determines the key type of a std::map or a null pointer if
+	 * the given node is not of a std::map.
+	 */
+	TypePtr getStdMapKeyType(const NodePtr& node);
+
+	/**
+	 * Determines the value type of a std::map or a null pointer if
+	 * the given node is not of a std::map.
+	 */
+	TypePtr getStdMapValueType(const NodePtr& node);
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

@@ -186,6 +186,51 @@ namespace lang {
 	}
 
 
+
+	// --------------------- std::map ---------------------------
+
+	bool isStdMap(const NodePtr& node) {
+
+		// extract the type
+		auto type = analysis::getType(node).isa<GenericTypePtr>();
+		if (!type) return false;
+
+		// check type properties
+
+		// no parents
+		if (!type->getParents()->empty()) return false;
+
+		// two parameters
+		if (type->getTypeParameter()->size() != 4) return false;
+
+		// check that both parameters are qualified references
+		for(const auto& cur : type->getTypeParameter()) {
+			if (!core::lang::isQualifiedReference(cur)) return false;
+		}
+
+		// finally, check the name
+		if (insieme::utils::demangle(type->getFamilyName()) != "std::map") return false;
+
+		// everything checks out
+		return true;
+	}
+
+	TypePtr getStdMapKeyType(const NodePtr& node) {
+		// check that it is indeed a vector
+		auto type = analysis::getType(node);
+		if (!isStdMap(type)) return nullptr;
+		// extract the element type
+		return core::analysis::getReferencedType(type.as<GenericTypePtr>()->getTypeParameter(0));
+	}
+
+	TypePtr getStdMapValueType(const NodePtr& node) {
+		// check that it is indeed a vector
+		auto type = analysis::getType(node);
+		if (!isStdMap(type)) return nullptr;
+		// extract the element type
+		return core::analysis::getReferencedType(type.as<GenericTypePtr>()->getTypeParameter(1));
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

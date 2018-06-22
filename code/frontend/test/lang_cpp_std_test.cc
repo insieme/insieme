@@ -93,6 +93,25 @@ namespace frontend {
 		EXPECT_EQ(basic.getReal8(),getStdVectorElementType(type));
 	}
 
+	TEST(LangCppStd, Map) {
+		NodeManager mgr;
+		auto& basic = mgr.getLangBasic();
+
+		// some simple cases
+		EXPECT_PRED1(isStdMap,utils::parseType(mgr,"std::map<int,int>"));
+		EXPECT_PRED1(isStdMap,utils::parseType(mgr,"std::map<int,double>"));
+		EXPECT_PRED1(isStdMap,utils::parseType(mgr,"struct A {};", "std::map<A,A>"));
+
+		// check the access to the element type
+		auto type = utils::parseType(mgr,"std::map<int,int>");
+		EXPECT_EQ(basic.getInt4(),getStdMapKeyType(type));
+		EXPECT_EQ(basic.getInt4(),getStdMapValueType(type));
+
+		type = utils::parseType(mgr,"std::map<int,bool>");
+		EXPECT_EQ(basic.getInt4(),getStdMapKeyType(type));
+		EXPECT_EQ(basic.getBool(),getStdMapValueType(type));
+
+	}
 
 	TEST(LangCppStd, Pair) {
 		NodeManager mgr;
