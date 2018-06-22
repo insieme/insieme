@@ -113,7 +113,7 @@ predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
 
     I.Lambda -> case () of
           _ | isImplicitCtor ->
-                single $ ProgramPoint (I.goDown 1 $ Sema.getEnclosingDeclaration parent) Post 
+                single $ ProgramPoint (I.goDown 1 $ Sema.getEnclosingDeclaration parent) Post
             | isImplicitDtor -> case () of
                 _ | dtorIndex == 0 -> single $ ProgramPoint (I.goDown ((I.numChildren scope) -1) scope) Post
                   | otherwise      -> single $ ProgramPoint (dtors !! (dtorIndex-1)) Post
@@ -254,7 +254,7 @@ predecessor  p@(ProgramPoint addr Internal) = case Q.getNodeType addr of
                 isLiteral _ = False
             litPredecessor = ProgramPoint (I.goDown 1 addr) Post
         callableVar = callableValue (I.goDown 1 addr)
-        callableVal a = 
+        callableVal a =
                 if BSet.isUniverse callables
                 then collectAllCallables addr
                 else callables
@@ -372,7 +372,7 @@ predecessor p@(ProgramPoint a Post) = case Q.getNodeType a of
 
     -- if the program point is pointing to a type, it is an implicit constructor call
     I.GenericType  -> single $ ProgramPoint a Pre
-    I.TypeVariable -> single $ ProgramPoint a Pre 
+    I.TypeVariable -> single $ ProgramPoint a Pre
 
     _ -> unhandled "Post" p (Q.getNodeType a)
 
@@ -399,8 +399,9 @@ postContinueStmt :: NodeAddress -> [ProgramPoint]
 postContinueStmt a = map (`ProgramPoint` Post)
                      (I.collectAddr I.ContinueStmt prune a)
   where
-    prune = [(== I.WhileStmt), (== I.ForStmt), (== I.LambdaExpr), isType]
+    prune = [(== I.WhileStmt), (== I.ForStmt), (== I.LambdaExpr), isType, isExpr]
     isType = (==I.Type) . I.toNodeKind
+    isExpr = (==I.Expression) . I.toNodeKind
 
 -- | Variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
@@ -411,4 +412,3 @@ unhandled :: String -> ProgramPoint -> I.NodeType
           -> Solver.TypedVar PredecessorList
 unhandled pos p parent = error . unwords $
   ["Unhandled", pos, "Program Point:", show p, "for parent", show parent]
-
