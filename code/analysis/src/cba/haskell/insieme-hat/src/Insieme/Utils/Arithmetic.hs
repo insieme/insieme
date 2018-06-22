@@ -57,7 +57,7 @@ import Prelude hiding (exponent, product)
 
 -- | Something like @-2 * x^2 * y^3 + 5 * z^1@ where @c@ denotes the type of
 -- coefficients and exponents, and @v@ the type of variables.
-data Formula c v = Formula { terms :: [Term c v] }
+data Formula c v = Formula { terms :: ![Term c v] }
   deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance Functor (Formula c) where
@@ -236,7 +236,7 @@ convertFactor (Factor b e) = Factor b (fromIntegral e)
 -- ** Product
 
 -- | Something like @x^2 * y^3@.
-data Product c v = Product { factors :: [Factor c v] }
+data Product c v = Product { factors :: ![Factor c v] }
   deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Functor (Product c) where
@@ -261,8 +261,9 @@ convertProduct = Product . map convertFactor . factors
 -- ** Term
 
 -- | Something like @-2 * x^2 * y^3@.
-data Term c v = Term { coeff   :: c,
-                       product :: Product c v}
+data Term c v = Term { coeff   :: !c
+                     , product :: !(Product c v)
+                     }
   deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Functor (Term c) where

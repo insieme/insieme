@@ -39,6 +39,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Insieme.Analysis.Reference (
     Location,
@@ -89,12 +90,12 @@ type Location = NodeAddress
 --
 
 data Reference i =
-      Reference {
-          creationPoint :: Location,
-          dataPath      :: DP.DataPath i
-      }
-    | NullReference
+      NullReference
     | UninitializedReference
+    | Reference
+      { creationPoint :: {-# UNPACK #-} !Location
+      , dataPath      :: !(DP.DataPath i)
+      }
   deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 
