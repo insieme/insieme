@@ -45,8 +45,11 @@ module Insieme.Inspire.IR.Tree where
 
 import Data.List
 import Data.Hashable
+import Data.Set (Set)
 import Control.DeepSeq
 import GHC.Generics (Generic)
+
+import qualified Data.Set as Set
 
 import Insieme.Inspire.IR.NodeType
 import Insieme.Inspire.IR.HashCons
@@ -111,6 +114,9 @@ getBuiltinTarget n = n
 
 isBuiltin :: Tree -> String -> Bool
 isBuiltin t s = elem s $ builtinTags $ getBuiltinTarget t
+
+isAnyOfBuiltin :: Set String -> Tree -> Bool
+isAnyOfBuiltin s t = any (flip Set.member s) $ builtinTags $ getBuiltinTarget t
 
 isaBuiltin :: Tree -> Bool
 isaBuiltin t = not $ null $ builtinTags $ getBuiltinTarget t

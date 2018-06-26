@@ -64,6 +64,8 @@ import Insieme.Analysis.Framework.ProgramPoint
 import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Analysis.Reference
 
+import qualified Data.Set as Set
+
 import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
@@ -589,11 +591,11 @@ reachingDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
 reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case Q.getNodeType addr of
 
         -- a declaration could be an assignment if it is materializing
-        I.Declaration | addr == loc && p == Pre ->
+        I.Declaration | p == Pre && addr == loc ->
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ Declaration addr
 
         -- at the declaration, potential initial definitions can be filtered out (artifact of recursive functions)
-        I.Declaration | addr == loc && p == Internal -> var
+        I.Declaration | p == Internal && addr == loc -> var
           where
             var = Solver.mkVariable varId [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -602,15 +604,15 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
             val a = Definitions $ BSet.delete Initial $ unD $ Solver.getLimit a defaultVar
 
         -- an implicit constructor call can be a definition
-        I.Declaration | callsImplicitConstructor addr && addr == loc && p == Post ->
+        I.Declaration | p == Post && addr == loc && callsImplicitConstructor addr ->
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ Constructor addr
 
         -- a call could be an assignment if it is materializing
-        I.CallExpr | addr == loc && p == Post && isMaterializingCall (I.getNode addr) ->
+        I.CallExpr | p == Post && addr == loc && isMaterializingCall (I.getNode addr) ->
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ MaterializingCall addr
 
         -- the call could also be the creation point if it is not materializing
-        I.CallExpr | addr == loc && p == Post ->
+        I.CallExpr | p == Post && addr == loc ->
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton Creation
 
         -- the entry point is the creation of everything that reaches this point
@@ -670,7 +672,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
 
         -- skip the interpretation of known effect-free builtins
-        I.CallExpr | p == Internal && (isSideEffectFreeBuiltin $ I.goDown 1 addr) -> var
+        I.CallExpr | p == Internal && (isAssignmentFreeFunction $ I.node $ I.goDown 1 addr) && (not isParentOfLocation) -> var
             where
                 var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.forward pre var
@@ -793,7 +795,9 @@ isAssignmentFreeFunction tree = case Q.getNodeType tree of
 
     I.Literal -> Q.isaBuiltin tree && not (Q.isBuiltin tree "ref_assign")
 
-    I.LambdaExpr -> any (Q.isBuiltin tree) [
+    I.LambdaExpr -> Q.isAnyOfBuiltin s tree
+      where
+        s= Set.fromList [
                                 "bool_and",
                                 "bool_not",
                                 "bool_or",
@@ -821,8 +825,13 @@ isAssignmentFreeFunction tree = case Q.getNodeType tree of
                                 "ptr_subscript",
                                 "ptr_to_array",
                                 "ptr_to_ref",
+                                "ptr_const_cast",
+                                "ptr_add",
+                                "ptr_sub",
                                 "ref_array_element",
                                 "ref_kind_cast",
+                                "ref_const_cast",
+                                "ref_component_access",
                                 "ref_member_access",
                                 "ref_new",
                                 "ref_new_init",
@@ -835,6 +844,7 @@ isAssignmentFreeFunction tree = case Q.getNodeType tree of
                         ]
 
     _ -> False
+
 
 
 --

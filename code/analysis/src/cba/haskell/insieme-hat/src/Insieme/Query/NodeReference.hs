@@ -41,6 +41,7 @@ module Insieme.Query.NodeReference where
 
 import Control.Monad
 import Data.List
+import Data.Set (Set)
 import Data.Maybe
 
 import Insieme.Inspire (NodeReference(..), node)
@@ -437,7 +438,6 @@ isDeclaration :: NodeLike a => a -> Bool
 isDeclaration = (==IR.Declaration) . IR.getNodeType . node
 
 
-
 -- ** Builtins
 
 isBuiltin :: (NodeLike a) => a -> String -> Bool
@@ -445,6 +445,9 @@ isBuiltin r n = IR.isBuiltin (node r) n
 
 isaBuiltin :: (NodeLike a) => a -> Bool
 isaBuiltin n = IR.isaBuiltin $ node n
+
+isAnyOfBuiltin :: (NodeLike a) => Set String -> a -> Bool
+isAnyOfBuiltin s n = IR.isAnyOfBuiltin s $ node n
 
 
 -- ** Materializing

@@ -161,11 +161,15 @@ member :: SetKey a => a -> BoundSet bb a -> Bool
 member _ Universe      = True
 member x (BoundSet xs) = Set.member x xs
 
+enforceBound :: (IsBound bb, SetKey a) => BoundSet bb a -> BoundSet bb a
+enforceBound bs@(BoundSet s) = if bound bs > 0 && Set.size s > bound bs then Universe else bs
+
 fromSet :: (IsBound bb, SetKey a) => Set a -> BoundSet bb a
-fromSet s = (BoundSet s) `union` empty
+fromSet s = enforceBound $ BoundSet s
 
 fromList :: (IsBound bb, SetKey a) => [a] -> BoundSet bb a
-fromList as = (BoundSet $ Set.fromList as) `union` empty
+fromList as = fromSet $ Set.fromList as
+
 
 -- | Convert a 'BoundSet' to a regular 'HashSet', throws an error when used with
 -- 'Universe'.
@@ -216,22 +220,24 @@ lift2 f (BoundSet x) (BoundSet y) = fromList prod
 union :: (IsBound bb, SetKey a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
 union    Universe     _            = Universe
 union    _            Universe     = Universe
-union bs@(BoundSet x) (BoundSet y) = if bound bs > 0 && Set.size u > bound bs
-                                         then Universe
-                                         else BoundSet u
-  where
-    u = Set.union x y
+union    a            b            | null a = b
+union    a            b            | null b = a
+union bs@(BoundSet x) (BoundSet y) = fromSet $ Set.union x y
 
 
 difference :: (SetKey a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
 difference Universe     Universe     = empty
 difference _            Universe     = empty
 difference Universe     _            = Universe
+difference a            _            | null a = a
+difference a            b            | null b = a
 difference (BoundSet x) (BoundSet y) = BoundSet $ Set.difference x y
 
 intersection :: (SetKey a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
 intersection Universe     x            = x
 intersection x            Universe     = x
+intersection a            _            | null a = a
+intersection _            b            | null b = b
 intersection (BoundSet x) (BoundSet y) = BoundSet $ Set.intersection x y
 
 cartProduct :: (IsBound bb, SetKey a, SetKey b)
