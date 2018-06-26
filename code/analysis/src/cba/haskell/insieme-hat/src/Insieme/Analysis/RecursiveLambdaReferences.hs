@@ -138,6 +138,7 @@ instance Lattice RecursiveLambdaReferenceIndex where
     (RecursiveLambdaReferenceIndex a) `merge` (RecursiveLambdaReferenceIndex b) = case () of
       _ | Map.null a -> RecursiveLambdaReferenceIndex b
         | Map.null b -> RecursiveLambdaReferenceIndex a
+        | a == b -> RecursiveLambdaReferenceIndex a
         | otherwise  -> undefined
 
 
