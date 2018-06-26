@@ -437,7 +437,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
         -- value composing utilities
 
-        valueDepsWithElemVars valueVars a =
+        valueDepsWithElemVars valueVars a = (Solver.toVar targetRefVar) :
               case () of _ | not $ isActive a -> [Solver.toVar oldStateVar]
                            | isFullAssign a   -> valueVars
                            | otherwise        -> (Solver.toVar oldStateVar) :  valueVars
