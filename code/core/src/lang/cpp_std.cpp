@@ -200,10 +200,10 @@ namespace lang {
 		// no parents
 		if (!type->getParents()->empty()) return false;
 
-		// two parameters
+		// four parameters
 		if (type->getTypeParameter()->size() != 4) return false;
 
-		// check that both parameters are qualified references
+		// check that all parameters are qualified references
 		for(const auto& cur : type->getTypeParameter()) {
 			if (!core::lang::isQualifiedReference(cur)) return false;
 		}
@@ -216,18 +216,18 @@ namespace lang {
 	}
 
 	TypePtr getStdMapKeyType(const NodePtr& node) {
-		// check that it is indeed a vector
+		// check that it is indeed a map
 		auto type = analysis::getType(node);
 		if (!isStdMap(type)) return nullptr;
-		// extract the element type
+		// extract the key type
 		return core::analysis::getReferencedType(type.as<GenericTypePtr>()->getTypeParameter(0));
 	}
 
 	TypePtr getStdMapValueType(const NodePtr& node) {
-		// check that it is indeed a vector
+		// check that it is indeed a map
 		auto type = analysis::getType(node);
 		if (!isStdMap(type)) return nullptr;
-		// extract the element type
+		// extract the value type
 		return core::analysis::getReferencedType(type.as<GenericTypePtr>()->getTypeParameter(1));
 	}
 
