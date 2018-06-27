@@ -127,6 +127,7 @@ data ReferenceAnalysis = ReferenceAnalysis
 -- * Reference Variable Generator
 --
 
+{-# INLINE referenceValue #-}
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
 referenceValue addr = case Q.getNodeType addr of
 

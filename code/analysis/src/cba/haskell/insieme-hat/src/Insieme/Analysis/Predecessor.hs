@@ -92,6 +92,8 @@ predecessorAnalysis = Solver.mkAnalysisIdentifier PredecessorAnalysis "pred_of"
 -- * Predecessor Variable Generator
 --
 
+{-# INLINE predecessor#-}
+
 -- | Given a program point (Pre, Post, or Internal), give the
 -- predecessors for it as a constraint.
 predecessor :: ProgramPoint -> Solver.TypedVar PredecessorList
