@@ -35,8 +35,6 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Insieme.Solver.AssignmentView
     ( AssignmentView(..)
     , get
@@ -46,8 +44,6 @@ module Insieme.Solver.AssignmentView
 import GHC.Stack
 
 import Data.Typeable
-import Data.Maybe
-import Data.List
 
 import {-# SOURCE #-} Insieme.Solver.Var
 import Insieme.Solver.Assignment
@@ -58,15 +54,13 @@ import Insieme.Solver.DebugFlags
 data AssignmentView = UnfilteredView Assignment
                     | FilteredView [Var] Assignment
 
-get :: forall a. (HasCallStack, Typeable a, Eq a, Show a) => AssignmentView -> TypedVar a -> a
+get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
 get (UnfilteredView a) v = get' a v
 get (FilteredView vs a) v = case () of 
     _ | not check_consistency || elem (toVar v) vs -> res
     _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
   where
-    res = get' a clean_v
-    clean_v :: TypedVar a
-    clean_v = fromMaybe v $ TypedVar <$> find (==toVar v) vs
+    res = get' a v
 
 stripFilter :: AssignmentView -> Assignment
 stripFilter (UnfilteredView a) = a
