@@ -62,8 +62,15 @@ data Tree = MkTree {
     } deriving (Show, Eq, Ord, Generic, NFData, Hashable)
 
 instance HashConsed Tree where
-    hcdId (MkTree _ hc) = hcId hc
+    hcdId (MkTree _ hc) = hcdId hc
     {-# INLINE hcdId #-}
+
+    hcdAttachFinalizer (MkTree _ hc) act =
+        hcdAttachFinalizer hc act
+    {-# INLINE hcdAttachFinalizer #-}
+
+    hcdHVal (MkTree _ hc) = hcdHVal hc
+
 
 instance NodeReference Tree where
     child i  = (!!i) . children

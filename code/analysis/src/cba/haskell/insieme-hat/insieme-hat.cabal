@@ -131,6 +131,7 @@ library
     -- for hashconsing
     build-depends:      hashtables
     exposed-modules:    Insieme.Inspire.IR.HashCons
+                        Insieme.Inspire.IR.HashCons.Types
                         Insieme.Inspire.IR.HCMap
 
 foreign-library insieme-hat

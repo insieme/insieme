@@ -67,6 +67,7 @@ import Insieme.Analysis.Reference
 import qualified Data.Set as Set
 
 import Insieme.Inspire (NodeAddress)
+import Insieme.Inspire.IR.HashCons
 import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 import qualified Insieme.Utils.Arithmetic as Ar
@@ -775,7 +776,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 -- A filter for the reaching definition analysis --
 
 isAssignmentFree :: I.Tree -> Bool
-isAssignmentFree tree = case Q.getNodeType tree of
+isAssignmentFree = memo $ \tree -> case Q.getNodeType tree of
 
         I.Literal     -> True
 
