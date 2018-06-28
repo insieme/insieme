@@ -95,13 +95,13 @@ import Insieme.Inspire.NodePath (NodePath, ppNodePathStr)
 import qualified Data.Hashable as Hash
 import qualified Insieme.Inspire.IR as IR
  
-data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
+data NodeAddress = NodeAddress { getPathReversed     :: !NodePath,
                                  getNode             :: IR.Tree,
                                  getParent           :: Maybe NodeAddress,
                                  getRoot             :: IR.Tree,
-                                 getAbsoluteRootPath :: NodePath,
-                                 getPathBNP          :: BinNodePath,
-                                 getHash             :: Int
+                                 getAbsoluteRootPath :: !NodePath,
+                                 getPathBNP          :: {-# UNPACK #-} !BinNodePath,
+                                 getHash             :: {-# UNPACK #-} !Int
                                }
   deriving (Generic, NFData)
 

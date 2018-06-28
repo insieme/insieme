@@ -57,9 +57,9 @@ import Insieme.Analysis.Entities.ProgramPoint (ProgramPoint(..))
 -- * Analysis Identifier -----
 
 data AnalysisIdentifier = AnalysisIdentifier {
-    aidToken :: TypeRep,
-    aidName  :: String,
-    aidHash  :: Int
+    aidToken :: {-# UNPACK #-} !TypeRep,
+    aidName  :: {-# UNPACK #-} !String,
+    aidHash  :: {-# UNPACK #-} !Int
 }
 
 instance Eq AnalysisIdentifier where
@@ -81,9 +81,9 @@ mkAnalysisIdentifier a n = AnalysisIdentifier
 -- * Identifier -----
 
 data Identifier = Identifier {
-    idHash   :: Int,
-    idValue  :: IdentifierValue,
-    analysis :: AnalysisIdentifier
+    idHash   :: {-# UNPACK #-} !Int,
+    idValue  :: {-# UNPACK #-} !IdentifierValue,
+    analysis :: {-# UNPACK #-} !AnalysisIdentifier
 } deriving (Eq, Ord)
 
 
