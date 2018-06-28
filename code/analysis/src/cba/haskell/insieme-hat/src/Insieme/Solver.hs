@@ -284,8 +284,9 @@ solveStep (SolverState !a !i u t r c) d (v:vs) =
         fa = FilteredView dep a
 
         trg = v
-        dep = dependingOn c ua
-        (idep,ni) = varsToIndexedVars i dep
+        dirty_dep = dependingOn c ua
+        (idep,ni) = varsToIndexedVars i dirty_dep
+        dep = varToSharedVar ni <$> dirty_dep
 
         newVarsList = filter f idep
             where
