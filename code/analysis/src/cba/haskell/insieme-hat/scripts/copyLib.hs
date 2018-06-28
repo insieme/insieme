@@ -65,17 +65,17 @@ getPackageVersion, getPackageName :: FilePath -> IO String
 getPackageVersion = getPackageTopLevelField "version"
 getPackageName = getPackageTopLevelField "name"
 
-getTargetPlatform :: IO (String, String, String)
-getTargetPlatform = do
+getTargetPlatform :: FilePath -> IO (String, String, String)
+getTargetPlatform ghcPath = do
   [arch, vendor, os]
       <- split '-' . dropWhileEnd isSpace
-         <$> readProcess "ghc" ["--print-target-platform"] ""
+         <$> readProcess ghcPath ["--print-target-platform"] ""
   return (arch, vendor, os)
 
-getCabalTargetPlatform :: IO String
-getCabalTargetPlatform = do
-  (arch, _, os) <- getTargetPlatform
-  ver <- getGHCVersion
+getCabalTargetPlatform :: FilePath -> IO String
+getCabalTargetPlatform ghcPath = do
+  (arch, _, os) <- getTargetPlatform ghcPath
+  ver <- getGHCVersion ghcPath
   return $ intercalate "-" [arch, os, "ghc-" ++ ver]
 
 split c str =
@@ -86,59 +86,103 @@ split c str =
         | c == c'   = Nothing : go c rest
         | otherwise = Just c' : go c rest
 
-getGHCVersion :: IO String
-getGHCVersion =
-    dropWhileEnd isSpace <$> readProcess "ghc" ["--numeric-version"] ""
+getGHCVersion :: FilePath -> IO String
+getGHCVersion ghcPath =
+    dropWhileEnd isSpace <$> readProcess ghcPath ["--numeric-version"] ""
 
 parseComp "%library" = Lib
 parseComp ('%':'e':'x':'e':':':comp) = (OtherComp 'x' comp)
+parseComp ('%':'t':'e':'s':'t':':':comp) = (OtherComp 't' comp)
 parseComp ('%':'f':'l':'i':'b':':':comp) = (OtherComp 'f' comp)
 -- parseComp ('%':'c':'o':'m':'p':':':comp) = (OtherComp 'f' comp)
 
+compName Lib = "library"
+compName (OtherComp _ comp) = comp
+
 main :: IO ()
 main = do
-  platform@(arch, _, os) <- getTargetPlatform
-  ghc_ver  <- getGHCVersion
-
-  let compBuildDir' = compBuildDir platform ghc_ver
-  let compDistDir' = compDistDir platform ghc_ver
-
   prog <- getProgName
---  print =<< getArgs
   case prog of
-    "hat-exec"    -> exec compBuildDir'
-    "hat-haddock" -> haddock compDistDir'
-    _             -> copyLib compBuildDir'
+    "hat-exec"    -> exec
+    "hat-haddock" -> haddock
+    _             -> copyLib
 
-exec compBuildDir' = do
+exec = do
   builddir:cmd:args <- getArgs
   cabal_file <- getCabalFile =<< getCurrentDirectory
+  compBuildDir' <- applyGhcInfo builddir compBuildDir
 
-  pkg_name <- getPackageName    cabal_file
-  pkg_ver  <- getPackageVersion cabal_file
+  exes <- case cmd of
+    '%':_ -> (:[]) <$> findExePath builddir cabal_file compBuildDir' (parseComp cmd)
+    _     -> mapM (findExePath builddir cabal_file compBuildDir' . flip OtherComp cmd) ['x', 't']
 
-  let distdir = builddir </> "dist-newstyle"
-      dir = compBuildDir' distdir pkg_name pkg_ver (OtherComp 'x' cmd)
+  fexes <- mapM exists exes
+  case catMaybes fexes of
+    []  -> error $ "Couldn't find any of:\n" ++ intercalate "\n" (map ("    "++) exes) ++ "\n"
+    [exe] -> exitWith =<< rawSystem exe args
+    _   -> error $ "Ambigous command '" ++ cmd ++ "' please specify component: maybe %exe:" ++ cmd ++ " or %test:" ++ cmd
+                ++ "\n"
 
-  exitWith =<< rawSystem (dir </> cmd) args
+  where
+    exists path = do
+         ex <- doesFileExist path
+         return $ if ex then Just path else Nothing
 
-haddock compDistDir' = do
+    findExePath :: FilePath -> FilePath -> (FilePath -> String -> Version -> Comp -> FilePath) -> Comp -> IO FilePath
+    findExePath builddir cabal_file compBuildDir' comp = do
+        withCabalFileCtx cabal_file $ \pkg_name pkg_ver -> do
+            let distdir = distdir_path builddir
+                dir = compBuildDir' distdir pkg_name pkg_ver comp
+                exe = dir </> compName comp
+            return $ exe
+
+distdir_path builddir = builddir </> "hat-vanilla-project" </> "dist-newstyle"
+
+haddock = do
   builddir:comp:args <- getArgs
   cabal_file <- getCabalFile =<< getCurrentDirectory
 
+  compDistDir' <- applyGhcInfo builddir compDistDir
   pkg_name <- getPackageName    cabal_file
   pkg_ver  <- getPackageVersion cabal_file
 
-  let distdir = builddir </> "dist-newstyle"
+  let distdir = distdir_path builddir
       dir = compDistDir' distdir pkg_name pkg_ver (parseComp comp)
 
   void $ rawSystem "cabal" $ ["act-as-setup", "--", "haddock", "--builddir="++dir]++args
   void $ rawSystem "cp" ["-av", dir </> "doc" , builddir]
   putStrLn dir
 
-data Comp = Lib | OtherComp { cType :: CompTy, cName :: CompName }
+copyLib = do
+  [cabal_file, comp, builddir, destdir] <- getArgs
 
-type CompTy = Char
+  compBuildDir' <- applyGhcInfo builddir compBuildDir
+  pkg_name <- getPackageName    cabal_file
+  pkg_ver  <- getPackageVersion cabal_file
+
+  let distdir = distdir_path builddir
+      srcdir = compBuildDir' distdir pkg_name pkg_ver (parseComp comp)
+      lib = "lib" ++ pkg_name ++ ".so"
+      srclib  = srcdir </> lib
+      destlib = destdir </> lib
+
+  copyFileWithMetadata srclib destlib
+
+
+withCabalFileCtx :: FilePath -> (String -> Version -> IO a) -> IO a
+withCabalFileCtx cabal_file f = do
+  pkg_name <- getPackageName    cabal_file
+  pkg_ver  <- getPackageVersion cabal_file
+  f pkg_name pkg_ver
+
+
+applyGhcInfo :: FilePath -> ((String, String, String) -> Version -> a) -> IO a
+applyGhcInfo builddir g = do
+    let ghcPath = builddir </> "third_party" </> "ghc" </> "bin" </> "ghc"
+    platform@(arch, _, os) <- getTargetPlatform ghcPath
+    ghc_ver  <- getGHCVersion ghcPath
+    return $ g platform ghc_ver
+
 
 compBuildDir, compDistDir
     :: (String, String, String) -> Version -> FilePath -> PkgName -> Version -> Comp -> FilePath
@@ -185,19 +229,6 @@ libCompBuildDir (arch, _, os) ghc_ver builddir pkg_name pkg_ver =
 
 type Version = String
 type CompName = String
+type CompTy = Char
 type PkgName = String
-
-copyLib :: (FilePath -> PkgName -> Version -> Comp -> FilePath) -> IO ()
-copyLib compBuildDir' = do
-  [cabal_file, comp, builddir, destdir] <- getArgs
-
-  pkg_name <- getPackageName    cabal_file
-  pkg_ver  <- getPackageVersion cabal_file
-
-  let distdir = builddir </> "dist-newstyle"
-      srcdir = compBuildDir' distdir pkg_name pkg_ver (parseComp comp)
-      lib = "lib" ++ pkg_name ++ ".so"
-      srclib  = srcdir </> lib
-      destlib = destdir </> lib
-
-  copyFileWithMetadata srclib destlib
+data Comp = Lib | OtherComp { cType :: CompTy, cName :: CompName }

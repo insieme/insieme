@@ -59,7 +59,7 @@ add_custom_command(
 	# -j1 because of cabal#4144
 	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 flib:insieme-hat
 	# copy library to binary dir
-	COMMAND ${runhaskell} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/copyLib.hs ${cabal_file} "%flib:insieme-hat" ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${runhaskell} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/copyLib.hs ${cabal_file} "%flib:insieme-hat" ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 
 	# Create symlinks for hat cabal superproject dir
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-vanilla-project"
@@ -88,7 +88,7 @@ if(BUILD_TESTS)
 
 	add_test(
 		NAME insieme_hat_run_tests
-		COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_CURRENT_BINARY_DIR} test
+		COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_BINARY_DIR} %test:test
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
 
@@ -103,7 +103,7 @@ if(BUILD_DOCS)
 	add_custom_command(
 		TARGET insieme_hat
 		POST_BUILD
-		COMMAND ${haskell_env} ./scripts/hat-haddock ${CMAKE_CURRENT_BINARY_DIR} "%library"
+		COMMAND ${haskell_env} ./scripts/hat-haddock ${CMAKE_BINARY_DIR} "%library"
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
 endif()
