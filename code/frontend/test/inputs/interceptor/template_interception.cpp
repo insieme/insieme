@@ -58,11 +58,13 @@ void intTypeParams() {
 		var ref<IMP_UIntTemplateClass<5u>,f,f,plain> v0 = lit("IMP_UIntTemplateClass::ctor" : IMP_UIntTemplateClass<5u>::())(ref_decl(type_lit(ref<IMP_UIntTemplateClass<5u>,f,f,plain>)));
 		var ref<IMP_UIntTemplateClass<2567483615u>,f,f,plain> v1 = lit("IMP_UIntTemplateClass::ctor" : IMP_UIntTemplateClass<2567483615u>::())(ref_decl(type_lit(ref<IMP_UIntTemplateClass<2567483615u>,f,f,plain>)));
 		var ref<IMP_UIntTemplateClass<4294967295u>,f,f,plain> v2 = lit("IMP_UIntTemplateClass::ctor" : IMP_UIntTemplateClass<4294967295u>::())(ref_decl(type_lit(ref<IMP_UIntTemplateClass<4294967295u>,f,f,plain>)));
+		var ref<IMP_UIntTemplateClass<18444473444759240704u>,f,f,plain> v3 = lit("IMP_UIntTemplateClass::ctor" : IMP_UIntTemplateClass<18444473444759240704u>::())(ref_decl(type_lit(ref<IMP_UIntTemplateClass<18444473444759240704u>,f,f,plain>)));
 	})")
 	{
 		UIntTemplateClass<5> fiveInstance;
 		UIntTemplateClass<2567483615ul> hugeInstance;
 		UIntTemplateClass<0xfffffffful> hexInstance;
+		UIntTemplateClass<0xfff7eee000000000> hexInstance2;
 	}
 }
 
