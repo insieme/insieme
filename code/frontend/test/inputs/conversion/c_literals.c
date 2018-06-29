@@ -61,6 +61,9 @@ int main() {
 	#pragma test expect_ir("2567483615ul")
 	0x9908b0dfUL;
 
+	#pragma test expect_ir("18444473444759240704ul")
+	0xfff7eee000000000UL;
+
 	#pragma test expect_ir("7ull")
 	7ull;
 

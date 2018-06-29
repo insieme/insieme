@@ -1290,11 +1290,11 @@ namespace core {
 	}
 
 	TypePtr IRBuilderBaseModule::numericType(int64_t value) const {
-		return numericType(literal(format("%d", value), getLangBasic().getIntInf()));
+		return numericType(literal(format("%" PRId64, value), getLangBasic().getIntInf()));
 	}
 
 	TypePtr IRBuilderBaseModule::numericTypeUnsigned(uint64_t value) const {
-		return numericType(literal(format("%u", value), getLangBasic().getUIntInf()));
+		return numericType(literal(format("%" PRIu64, value), getLangBasic().getUIntInf()));
 	}
 
 	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {
