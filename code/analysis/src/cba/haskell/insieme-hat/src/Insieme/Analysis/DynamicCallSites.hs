@@ -42,8 +42,9 @@
 module Insieme.Analysis.DynamicCallSites where
 
 import Control.DeepSeq
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -58,7 +59,7 @@ import qualified Insieme.Solver as Solver
 --
 
 newtype CallSite = CallSite NodeAddress
- deriving (Eq, Ord, Generic, NFData)
+ deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance Show CallSite where
     show (CallSite na) = "Call@" ++ (I.prettyShow na)

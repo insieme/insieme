@@ -67,6 +67,7 @@ import Insieme.Analysis.Reference
 import qualified Data.Set as Set
 
 import Insieme.Inspire (NodeAddress)
+import Insieme.Inspire.IR.HashCons
 import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 import qualified Insieme.Utils.Arithmetic as Ar
@@ -121,6 +122,7 @@ memoryStateAnalysis a = Solver.mkAnalysisIdentifier (MemoryStateAnalysis a) ('M'
 -- * Memory State Variable Generator
 --
 
+{-# INLINE memoryStateValue #-}
 memoryStateValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          => MemoryStatePoint                            -- ^ the program point and memory location interested in
          -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this memory state analysis is cooperating with
@@ -202,6 +204,7 @@ definedValueAnalysis a = Solver.mkAnalysisIdentifier (DefinedValueAnalysis a) ( 
 -- * Defined Value Variable Generator
 --
 
+{-# INLINE definedValue #-}
 definedValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          => NodeAddress                                 -- ^ the definition interrested in
          -> Phase                                       -- ^ the execution phase of this definition
@@ -506,6 +509,7 @@ referencedValueAnalysis a = Solver.mkAnalysisIdentifier (ReferencedValueAnalysis
 -- * Referenced Value Variable Generator
 --
 
+{-# INLINE referencedValue #-}
 referencedValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          => NodeAddress                                 -- ^ the expression providing a reference to the value of interest
          -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this defined value analysis is cooperating with
@@ -587,6 +591,7 @@ reachingDefinitionAnalysis = Solver.mkAnalysisIdentifier ReachingDefinitionAnaly
 -- * Reaching Definition Variable Generator
 --
 
+{-# INLINE reachingDefinitions #-}
 reachingDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
 reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case Q.getNodeType addr of
 
@@ -771,7 +776,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 -- A filter for the reaching definition analysis --
 
 isAssignmentFree :: I.Tree -> Bool
-isAssignmentFree tree = case Q.getNodeType tree of
+isAssignmentFree = memo $ \tree -> case Q.getNodeType tree of
 
         I.Literal     -> True
 

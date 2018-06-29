@@ -39,7 +39,7 @@ module Insieme.Analysis.Framework.ProgramPoint where
 
 import Data.Maybe
 
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Query as Q

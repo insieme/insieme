@@ -39,6 +39,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Insieme.Analysis.Reference (
     Location,
@@ -55,7 +56,7 @@ import Data.Maybe
 import Data.Typeable
 import Data.Hashable
 import Data.AbstractSet (Set, SetKey)
-import Data.AbstractSet as Set
+import qualified Data.AbstractSet as Set
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -89,12 +90,12 @@ type Location = NodeAddress
 --
 
 data Reference i =
-      Reference {
-          creationPoint :: Location,
-          dataPath      :: DP.DataPath i
-      }
-    | NullReference
+      NullReference
     | UninitializedReference
+    | Reference
+      { creationPoint :: {-# UNPACK #-} !Location
+      , dataPath      :: !(DP.DataPath i)
+      }
   deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 
@@ -126,6 +127,7 @@ data ReferenceAnalysis = ReferenceAnalysis
 -- * Reference Variable Generator
 --
 
+{-# INLINE referenceValue #-}
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
 referenceValue addr = case Q.getNodeType addr of
 

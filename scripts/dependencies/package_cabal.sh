@@ -1,5 +1,5 @@
 NAME="cabal"
-VERSION="42d92c943a7b069f629f4ebc726be06dae953bcf"
+VERSION="987570d8f2c85d28bd1c75fe9a37de7291b1b180"
 PACKAGE="$NAME-$VERSION"
 
 URL="https://github.com/haskell/cabal.git"

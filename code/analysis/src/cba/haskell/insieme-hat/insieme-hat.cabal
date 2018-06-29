@@ -27,6 +27,8 @@ library
                         Data.AbstractMap.Orphan,
                         Data.AbstractMap.Strict,
                         Data.AbstractSet,
+                        Data.AbstractLut,
+                        Data.TyMap
                         Insieme.Adapter.Utils,
                         Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
@@ -69,6 +71,7 @@ library
                         Insieme.Inspire.IR.NodeType.ThHelpers,
                         Insieme.Inspire.IR.Transform,
                         Insieme.Inspire.IR.Tree,
+                        Insieme.Inspire.IR
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.NodePath,
                         Insieme.Inspire.NodeReference
@@ -128,6 +131,7 @@ library
     -- for hashconsing
     build-depends:      hashtables
     exposed-modules:    Insieme.Inspire.IR.HashCons
+                        Insieme.Inspire.IR.HashCons.Types
                         Insieme.Inspire.IR.HCMap
 
 foreign-library insieme-hat
@@ -182,6 +186,9 @@ executable insieme-hat-exe
     default-language:   Haskell2010
 
 executable cba_runner
+    buildable: False
+    -- ^ text-format doens't work with ghc 8.4
+
     main-is:            CbaRunner.hs
     hs-source-dirs:     bin/
     extra-libraries:    insieme_analysis
@@ -199,7 +206,6 @@ executable cba_runner
                         split >= 0.2.3.1,
                         template-haskell >= 2.9,
                         text >= 1.2,
-                        text-format >= 0.3,
                         transformers >= 0.4
     default-language:   Haskell2010
 
@@ -221,7 +227,6 @@ executable parseNdump
                         split >= 0.2.3.1,
                         template-haskell >= 2.9,
                         text >= 1.2,
-                        text-format >= 0.3,
                         transformers >= 0.4
     default-language:   Haskell2010
 
@@ -252,7 +257,7 @@ test-suite test
                         containers >= 0.5.10,
                         tasty >= 0.11,
                         tasty-hunit >= 0.9,
-                        pretty-show >= 1.6 && < 1.7,
+                        pretty-show >= 1.6,
                         unordered-containers
     type:               exitcode-stdio-1.0
     default-language:   Haskell2010
@@ -273,6 +278,9 @@ executable profiler
                       , filepath         >= 1.4
 
 benchmark bench
+    buildable: False
+    -- ^ Build is broken atm
+
     main-is:            bench.hs
     hs-source-dirs:     bench
     extra-libraries:    insieme_analysis

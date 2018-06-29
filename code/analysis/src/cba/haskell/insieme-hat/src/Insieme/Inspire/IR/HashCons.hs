@@ -38,29 +38,65 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
-module Insieme.Inspire.IR.HashCons where
+-- TODO: Move module, this isn't really specific to the IR, maybe to
+-- Insisme.Inspire?
+
+module Insieme.Inspire.IR.HashCons
+    ( module Insieme.Inspire.IR.HashCons
+    , module Insieme.Inspire.IR.HashCons.Types
+    ) where
 
 import Control.DeepSeq
+import Control.Monad
+import Control.Exception
 import Control.Concurrent.MVar
+import Insieme.Inspire.IR.HCMap (HCMap)
+import qualified Insieme.Inspire.IR.HCMap as HCMap
+import Insieme.Inspire.IR.HashCons.Types
+
+import Data.Proxy
+import Data.Dynamic
 import Data.Hashable
 import Data.HashTable.IO (BasicHashTable)
 import qualified Data.HashTable.IO as HashTable
 import System.IO
 import System.Mem.Weak
+import Type.Reflection
 
 import Data.IORef
 
 import System.IO.Unsafe
 
-data HC a = HC { hcHash :: !Int, hcVal :: a, hcId :: !HCId, hcDeRef :: IORef () }
+data HC a =
+    HC { hcHashed :: {-# UNPACK #-} !(Hashed a)
+       , hcId     :: {-# UNPACK #-} !HCId
+       , hcDeRef  :: {-# UNPACK #-} !(IORef ())
+       }
+
+hcVal = unhashed . hcHashed
 
 instance Hashable (HC a) where
-    hash = hcHash
-    hashWithSalt s hc = hashWithSalt s (hcHash hc)
+    hash = hash . hcHashed
+    hashWithSalt s = hashWithSalt s . hcHashed
+
+instance (Eq a, Typeable a) => HashConsed (HC a) where
+    hcdId HC {hcId} = hcId
+    {-# INLINE hcdId #-}
+
+    hcdAttachFinalizer HC{hcDeRef} act =
+        void $ mkWeakIORef hcDeRef (void act)
+    {-# INLINE hcdAttachFinalizer #-}
+
+    hcdHVal HC{hcHashed} = SomeHashed hcHashed
 
 instance Eq (HC a) where
-    HC _ _ a _ == HC _ _ b _ = a == b
+    HC{hcDeRef=a}  == HC{hcDeRef=b} = a == b
 
 -- | Checks the tag for equality first, and otherwise falls back to the
 -- underlying type's ordering
@@ -68,16 +104,11 @@ instance Ord a => Ord (HC a) where
   compare x y = if x == y then EQ else compare (hcVal x) (hcVal y)
 
 instance NFData a => NFData (HC a) where
-    rnf HC {hcVal}  = hcVal `seq` () -- since we calculate the hash strictly
-                                     -- when inserting HCs are already in NF
+    rnf HC {hcHashed} = hcHashed `seq` () -- since we calculate the hash
+                                          -- strictly when inserting HCs are
+                                          -- already in NF
 instance Show a => Show (HC a) where
     show = show . hcVal
-
-newtype HCId = HCId { unHCId :: Int }
-    deriving (Eq, Ord, Show)
-
-inc :: HCId -> HCId
-inc (HCId !i) = HCId (i + 1)
 
 type HashTable k v = BasicHashTable k v
 type Cache a = (HashTable (Hashed a) (Weak (HC a)), IORef Integer)
@@ -90,14 +121,14 @@ class (Eq a, Hashable a) => HashCons a where
   hcCache = unsafePerformIO newCache
   {-# NOINLINE hcCache #-}
 
-class HashConsed a where
-    hcdId :: a -> HCId
-
 hcGlobalId :: MVar HCId
 hcGlobalId = unsafePerformIO $ newMVar (HCId 0)
 {-# NOINLINE hcGlobalId #-}
 
-lookupOrAdd :: (Eq a, Hashable a) => a -> Cache a -> IO (HC a)
+inc :: HCId -> HCId
+inc (HCId !i) = HCId (i + 1)
+
+lookupOrAdd :: forall a. (Eq a, Hashable a, Typeable a) => a -> Cache a -> IO (HC a)
 lookupOrAdd x (c, sr) = do
    mhc <- HashTable.lookup c hx
    case mhc of
@@ -120,14 +151,31 @@ lookupOrAdd x (c, sr) = do
        modifyIORef' sr (+1)
        putMVar hcGlobalId (inc i)
 
-       let hc = HC (hash hx) x i ref
+       do
+         sz <- readIORef sr
+         when (sz `mod` 10000 == 0) $
+             print ("HC cache size", show (typeRep @a), sz)
+
+       let hc = HC hx i ref
 
        HashTable.insert c hx =<< mkWeakPtr hc Nothing
        return hc
 
-
-hc :: HashCons a => a -> HC a
+hc :: (HashCons a, Typeable a) => a -> HC a
 hc x = unsafePerformIO $ lookupOrAdd x hcCache
 
+{-# NOINLINE memo #-}
 
-
+memo :: HashConsed a => (a -> b) -> a -> b
+memo f = unsafePerformIO $ do
+   m <- HashTable.new :: IO (HashTable SomeHashed b)
+   return $ \a -> unsafePerformIO $ do
+        let hx = hcdHVal a
+        mb <- HashTable.lookup m hx
+        case mb of
+          Just b -> return b
+          Nothing -> do
+            let !b = f a
+            hcdAttachFinalizer a (HashTable.delete m hx)
+            HashTable.insert m hx b
+            return b

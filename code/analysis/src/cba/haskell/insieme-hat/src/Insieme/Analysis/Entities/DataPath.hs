@@ -74,8 +74,8 @@ instance Show Direction where
 
 data DataPath i =
           Root
-        | DataPath (DataPath i) Direction i
         | Invalid
+        | DataPath (DataPath i) !Direction !i
   deriving (Eq, Ord, Generic, NFData, Hashable)
 
 

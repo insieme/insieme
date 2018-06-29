@@ -51,7 +51,7 @@ import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap as IntMap
-import qualified Data.Map.Strict as Map
+import qualified Data.AbstractMap.Strict as Map
 import Prelude hiding (take)
 
 import qualified Insieme.Inspire.IR as IR

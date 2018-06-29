@@ -36,6 +36,7 @@
  -}
 
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE Strict #-}
 
 module Insieme.Solver.Constraint
     ( Constraint(..)
@@ -55,8 +56,8 @@ module Insieme.Solver.Constraint
 
 import Prelude hiding (print)
 
-import           Data.Set (Set)
-import qualified Data.Set as Set
+import           Data.AbstractSet (Set)
+import qualified Data.AbstractSet as Set
 
 import {-# SOURCE #-} Insieme.Solver.Var
 import Insieme.Solver.Assignment

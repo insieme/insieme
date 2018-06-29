@@ -49,7 +49,7 @@ import GHC.Generics
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IntMap
 
-import Insieme.Inspire.IR.HashCons
+import Insieme.Inspire.IR.HashCons.Types
 
 newtype HCMap a b = HCMap (IntMap b)
     deriving (Eq, Ord, Show, Generic, NFData, Functor, Foldable, Traversable)

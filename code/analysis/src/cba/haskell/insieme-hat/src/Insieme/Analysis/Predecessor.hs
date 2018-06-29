@@ -50,9 +50,10 @@ import Control.DeepSeq (NFData)
 import Data.Typeable
 import GHC.Generics (Generic)
 
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 
 import Insieme.Inspire (NodeAddress)
+import Insieme.Inspire.IR.HashCons
 import qualified Insieme.Query as Q
 import qualified Insieme.Inspire as I
 import qualified Insieme.Utils.BoundSet as BSet
@@ -91,6 +92,8 @@ predecessorAnalysis = Solver.mkAnalysisIdentifier PredecessorAnalysis "pred_of"
 --
 -- * Predecessor Variable Generator
 --
+
+{-# INLINE predecessor#-}
 
 -- | Given a program point (Pre, Post, or Internal), give the
 -- predecessors for it as a constraint.
@@ -396,12 +399,18 @@ none' p = Solver.mkVariable (idGen p) [] Solver.bot
 -- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
 -- below the given address.
 postContinueStmt :: NodeAddress -> [ProgramPoint]
-postContinueStmt a = map (`ProgramPoint` Post)
-                     (I.collectAddr I.ContinueStmt prune a)
+postContinueStmt a = map ((`ProgramPoint` Post) . I.append a) list
   where
-    prune = [(== I.WhileStmt), (== I.ForStmt), (== I.LambdaExpr), isType, isExpr]
-    isType = (==I.Type) . I.toNodeKind
-    isExpr = (==I.Expression) . I.toNodeKind
+    list = postContLocal (I.node a)
+
+    postContLocal :: I.Tree -> [NodeAddress]
+    postContLocal =
+        memo $ \t -> I.collectAddr I.ContinueStmt prune (I.mkNodeAddress [] t)
+      where
+        prune = [(== I.WhileStmt), (== I.ForStmt), (== I.LambdaExpr), isType, isExpr]
+        isType = (==I.Type) . I.toNodeKind
+        isExpr = (==I.Expression) . I.toNodeKind
+
 
 -- | Variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier

@@ -109,8 +109,8 @@ valuePrint = _valuePrint
 -- showVarWithValue :: Var -> String
 -- showVarWithValue v = show v ++ " #" ++ show (hash v) ++ " = " ++ valuePrint v a
 
-maybeValToBottom :: Var -> Maybe Dynamic -> Dynamic
-maybeValToBottom v Nothing  = _bottom v
+maybeValToBottom :: Typeable a => Var -> Maybe a -> a
+maybeValToBottom v Nothing  = let Just bot = fromDynamic (_bottom v) in bot
 maybeValToBottom _ (Just v) = v
 
 

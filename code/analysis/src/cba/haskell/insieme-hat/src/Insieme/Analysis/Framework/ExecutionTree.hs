@@ -74,25 +74,23 @@ data ExecutionTreeAnalysis v = ExecutionTreeAnalysis {
 }
 
 -- a function creating a simple execution tree analysis
-mkExecutionTreeAnalysis :: (Typeable a, Solver.ExtLattice v) 
-        => a 
+mkExecutionTreeAnalysis :: (Typeable a, Solver.Lattice v)
+        => a
         -> String 
         -> (NodeAddress -> Solver.TypedVar v) 
+        -> (NodeAddress -> v)
+        -> (NodeAddress -> v)
         -> ExecutionTreeAnalysis v
-mkExecutionTreeAnalysis a s g = res
+mkExecutionTreeAnalysis a s variableGenerator unhandledOperatorHandler unknownTargetHandler = res
   where
-    res = ExecutionTreeAnalysis aid g [] unhandledOperatorHandler unknownTargetHandler True
+    res = ExecutionTreeAnalysis aid variableGenerator [] unhandledOperatorHandler unknownTargetHandler True
     aid = Solver.mkAnalysisIdentifier a s
-    justTop _ = Solver.top
-    unhandledOperatorHandler = justTop
-    unknownTargetHandler = justTop
-
 
 --
 -- * Generic bottom-up execution tree analysis
 --
 
-executionTreeValue :: (Solver.ExtLattice a)
+executionTreeValue :: Solver.Lattice a
          => ExecutionTreeAnalysis a
          -> NodeAddress
          -> Solver.TypedVar a

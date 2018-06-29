@@ -50,7 +50,7 @@ module Insieme.Analysis.ExitPoint (
 ) where
 
 import Control.DeepSeq
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 import Data.Typeable
 import GHC.Generics (Generic)
 

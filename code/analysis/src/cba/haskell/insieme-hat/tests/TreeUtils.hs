@@ -44,8 +44,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import Text.Show.Pretty
-import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.AbstractMap (Map)
+import qualified Data.AbstractMap as Map
 import Data.Maybe
 
 nil n = n []

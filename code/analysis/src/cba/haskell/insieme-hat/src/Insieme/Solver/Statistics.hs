@@ -46,9 +46,9 @@ import Text.Printf
 import GHC.Stats
 
 import qualified Data.Graph as Graph
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import           Data.AbstractMap.Strict (Map)
+import qualified Data.AbstractMap.Strict as Map
+import qualified Data.AbstractSet as Set
 
 import Insieme.Solver.Constraint
 import Insieme.Solver.Identifier
@@ -78,8 +78,15 @@ showSolverStatistics SolverStats {..} = unlines
   , "========================================================================================================================================================================="
   ]
 
-pico_to_micro_sec :: (Real a) => a -> Double
+pico_to_micro_sec :: Real a => a -> Double
 pico_to_micro_sec a =  (realToFrac a / (10^6))
+
+nano_to_sec :: Real a => a -> Double
+nano_to_sec a = realToFrac a / (10^9)
+
+bytes_to_mb :: Integral a => a -> a
+bytes_to_mb a = a `div` (2^20)
+
 
 showGipedaSolverStatistics :: String -> SolverStats -> String
 showGipedaSolverStatistics keyPostfix SolverStats {..} =
@@ -106,18 +113,18 @@ showGipedaSolverStatistics keyPostfix SolverStats {..} =
           ]
     , case gcStats of
         Nothing -> []
-        Just GCStats {..} -> prefix "gc/" $
-          [ value "total_gcs" numGcs
-          , value "major_gcs" numByteUsageSamples
-          , value "bytes_copied" bytesCopied
-          , value "max_bytes_used" maxBytesUsed
-          , value "total_memory_in_use_MB" peakMegabytesAllocated
-          , value "MUT_cpu_sec" mutatorCpuSeconds
-          , value "MUT_wall_sec" mutatorWallSeconds
-          , value "GC_cpu_sec" gcCpuSeconds
-          , value "GC_wall_sec" gcWallSeconds
-          , value "TOTAL_cpu_sec" cpuSeconds
-          , value "TOTAL_wall_sec" wallSeconds
+        Just RTSStats {..} -> prefix "gc/" $
+          [ value "total_gcs" gcs
+          , value "major_gcs" major_gcs
+          , value "bytes_copied" copied_bytes
+          , value "max_bytes_used" max_live_bytes
+          , value "total_memory_in_use_MB" $ bytes_to_mb max_mem_in_use_bytes
+          , value "MUT_cpu_sec" $ nano_to_sec mutator_cpu_ns
+          , value "MUT_wall_sec" $ nano_to_sec mutator_elapsed_ns
+          , value "GC_cpu_sec" $ nano_to_sec gc_cpu_ns
+          , value "GC_wall_sec" $ nano_to_sec gc_elapsed_ns
+          , value "TOTAL_cpu_sec" $ nano_to_sec cpu_ns
+          , value "TOTAL_wall_sec" $ nano_to_sec elapsed_ns
           ]
     ]
   where
@@ -154,7 +161,7 @@ data SolverStats =
 
     , analysesStats :: [AnalysisStats]
     , variableStats :: VarDependencyStats
-    , gcStats       :: Maybe GCStats
+    , gcStats       :: Maybe RTSStats
     }
 
 data AnalysisStats =
@@ -172,7 +179,7 @@ data AnalysisStats =
     , asTimePerUpd    :: Float
     }
 
-solverStats :: SolverState -> Maybe GCStats -> SolverStats
+solverStats :: SolverState -> Maybe RTSStats -> SolverStats
 solverStats s@SolverState
                     { numSteps  = Map.map toInteger -> numSteps
                     , numResets = Map.map toInteger -> numResets

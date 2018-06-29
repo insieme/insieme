@@ -35,62 +35,32 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Main where
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE GADTs #-}
 
-import System.IO
-import Control.Monad
-import Control.Exception
-import Control.DeepSeq
-import Data.List
-import Insieme.Inspire.BinaryParser
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Visit
+module Insieme.Inspire.IR.HashCons.Types where
 
-import qualified Data.AbstractSet as Set
-import qualified Data.ByteString as BS
-import qualified Insieme.Inspire as IR
+import Data.IORef
+import Data.Hashable
+import Data.Type.Equality
+import Type.Reflection
 
-main :: IO ()
-main = do
-    Right ir <- parseBinaryDump <$> BS.getContents
-    -- ir' <- evaluate $ force ir
+newtype HCId = HCId { unHCId :: Int }
+    deriving (Eq, Ord, Show)
 
---    print  "evaluate"
+data SomeHashed = forall a. (Eq a, Hashable a, Typeable a) =>
+    SomeHashed { unSomeHashTableable :: a }
 
---    let cnt n = (1+) $ sum $ map cnt $ IR.getChildren n
---    let ids n = Set.insert (IR.getID n) $ Set.unions $ map ids $ IR.getChildren n
+instance Hashable SomeHashed where
+    hashWithSalt s (SomeHashed a) = hashWithSalt s a
 
---    print  ("cnt", cnt ir')
---    print  ("ids", ids ir')
+instance Eq SomeHashed where
+    SomeHashed a == SomeHashed b =
+        case eqTypeRep (typeOf a) (typeOf b) of
+          Just HRefl -> a == b
+          Nothing -> False
 
--- (isCallExpr)
-    let nodes = collectAllPrune (const True) (const NoPrune) $ mkNodeAddress [] ir
-    let paths = collectAllPrunePaths (const True) (const NoPrune) ir
---    let nodes' = collectAllPrune' isCallExpr ir
-
---    let cnt n = (1+) $ sum $ map cnt $ IR.getChildren n
-
---    print $ cnt ir
-
-    print $ length paths
---    print $ take 100 nodes
---    mapM_ evaluate $ map force nodes
---    evaluate $ force nodes
-
---(flip mkNodeAddress ir)
--- mkNodeAddresses' ir
---    evaluate $ force $ map getPathReversed $ mkNodeAddresses ir paths
-
-
-    -- print ("is sorted", sort nodes' == nodes')
-    -- print (" elems", take 10 (sort nodes'))
-    -- print ("selems", take 10       nodes')
-
-    -- print ("is same", sort nodes == sort nodes')
-    -- print ("len", length nodes, length nodes')
-
-    return ()
-
-isCallExpr :: IR.Tree -> Bool
-isCallExpr a | IR.getNodeType a == IR.CallExpr = True
-isCallExpr _ = False
+class HashConsed a where
+    hcdId       :: a -> HCId
+    hcdAttachFinalizer :: a -> IO b -> IO ()
+    hcdHVal     :: a -> SomeHashed

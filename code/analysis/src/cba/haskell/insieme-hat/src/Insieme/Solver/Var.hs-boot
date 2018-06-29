@@ -39,6 +39,7 @@ module Insieme.Solver.Var where
 
 import Data.Dynamic (Dynamic)
 import Data.Hashable (Hashable)
+import Data.Typeable (Typeable)
 
 import {-# SOURCE #-} Insieme.Solver.Constraint
 
@@ -51,7 +52,7 @@ instance Hashable Var
 
 constraints :: Var -> [Constraint]
 bottom :: Var -> Dynamic
-maybeValToBottom :: Var -> Maybe Dynamic -> Dynamic
+maybeValToBottom :: Typeable a => Var -> Maybe a -> a
 
 newtype TypedVar a = TypedVar Var
 

@@ -47,25 +47,22 @@ module Insieme.Inspire.IR.Transform
 import Control.Monad.State
 import Data.Maybe
 
-import Data.AbstractHashMap.Lazy (Map, MapKey)
-import qualified Data.AbstractHashMap.Lazy as Map -- TODO: Strict?
+import Insieme.Inspire.IR.HCMap (HCMap)
+import qualified Insieme.Inspire.IR.HCMap as HCMap
 
 import Insieme.Inspire.IR.NodeType as NT
 import Insieme.Inspire.IR.Tree as IR
 
+
 import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
 
-
-
-type TreeSubst = Map IR.Tree IR.Tree
-
 substitutePrunable :: (IR.Tree -> Bool) -> (IR.Tree -> IR.Tree) -> IR.Tree -> IR.Tree
-substitutePrunable prune subst t = evalState (substitutePrunable' prune subst t) Map.empty
+substitutePrunable prune subst t = evalState (substitutePrunable' prune subst t) HCMap.empty
 
-substitutePrunable' :: (IR.Tree -> Bool) -> (IR.Tree -> IR.Tree) -> IR.Tree -> State TreeSubst IR.Tree
+substitutePrunable' :: (IR.Tree -> Bool) -> (IR.Tree -> IR.Tree) -> IR.Tree -> State (HCMap IR.Tree IR.Tree) IR.Tree
 substitutePrunable' prune subst t0 = do
   s <- get
-  case Map.lookup t0 s of
+  case HCMap.lookup t0 s of
     Just t1 -> return t1
     Nothing | prune t0 -> return t0
     Nothing -> do
@@ -74,7 +71,7 @@ substitutePrunable' prune subst t0 = do
        let t1 = subst t0
        let t2 | ch' == ch = t1
               | otherwise = mkNode (getNodeType t1) ch' []
-       modify (Map.insert t0 t2)
+       modify (HCMap.insert t0 t2)
        return t2
 
 
@@ -86,16 +83,16 @@ substituteInLocalScope = substitutePrunable $ (NT.Lambda==) . getNodeType
 
 
 removeIds :: IR.Tree -> IR.Tree
-removeIds t = evalState (removeIds' t) Map.empty
+removeIds t = evalState (removeIds' t) HCMap.empty
 
-removeIds' :: IR.Tree -> State TreeSubst IR.Tree
+removeIds' :: IR.Tree -> State (HCMap IR.Tree IR.Tree) IR.Tree
 removeIds' t = do
   s <- get
-  case Map.lookup t s of
+  case HCMap.lookup t s of
     Just t' -> return t'
     Nothing -> do
         let ch = getChildren t
         ch' <- mapM removeIds' ch
         let t' = mkNode (getNodeType t) ch' (builtinTags t)
-        modify (Map.insert t t')
+        modify (HCMap.insert t t')
         return t'

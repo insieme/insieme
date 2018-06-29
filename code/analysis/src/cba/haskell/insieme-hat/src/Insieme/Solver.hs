@@ -40,6 +40,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
+-- {-# Strict -} causes +15% mem and +10% runtime
 
 module Insieme.Solver (
 
@@ -112,19 +113,23 @@ import System.CPUTime
 import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
+import Debug.Trace
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import           Data.AbstractMap.Strict (Map)
+import qualified Data.AbstractMap.Strict as Map
+import           Data.AbstractLut (Lut)
+import qualified Data.AbstractLut as Lut
+
 import           Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IntMap
 --import           Data.Judy (JudyL)
 --import qualified Data.Judy as Judy
-import           Data.Set (Set)
-import qualified Data.Set as Set
+import           Data.AbstractSet (Set)
+import qualified Data.AbstractSet as Set
 
 import Insieme.Inspire (NodePath)
 import qualified Insieme.Inspire as I
@@ -149,8 +154,6 @@ import Insieme.Solver.Statistics
 -- a utility to maintain dependencies between variables
 newtype Dependencies = Dependencies (IntMap (Set IndexedVar))
         deriving Show
-
--- (HashMap IndexedVar (Set IndexedVar))
 
 emptyDep :: Dependencies
 emptyDep = Dependencies IntMap.empty
@@ -237,9 +240,9 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- add periodic debugging messages
-solveStep s _ _ | enable_tracing && trace ("Time step " ++ (show $ totalSteps s) ++ "\n" ++ (showSolverStatistics $ solverStats s Nothing)) False = undefined
+solveStep s _ _ | enable_tracing && trace ("Time step " ++ (show $ iterationCount s) ++ "\n" ++ (showSolverStatistics $ solverStats s Nothing)) False = undefined
   where
-    enable_tracing = num_steps_between_statistic_prints > 0 && (totalSteps s) `mod` num_steps_between_statistic_prints == 0
+    enable_tracing = num_steps_between_statistic_prints > 0 && (iterationCount s) `mod` num_steps_between_statistic_prints == 0
 
 -- compute next element in work list
 
@@ -265,14 +268,14 @@ solveStep (SolverState !a !i u t r s) d (v:vs) =
           (a', None)      -> (a', ni, nd, nv, numResets)
 
           -- add depending variables to work list
-          (a', Increment) -> (a', ni, nd, uv ++ nv, numResets)
+          (!a', Increment) -> (a', ni, nd, uv ++ nv, numResets)
 
           -- handling a local reset
           (a', Reset)     -> (ra, ni, nd, uv ++ nv, numResets+1)
             where
               dep = getAllDep nd trg
 
-              ra | not (Set.member trg dep) =
+              !ra | not (Set.member trg dep) =
                      -- if variable is not indirectly depending on itself reset
                      -- all depending variables to their bottom value
                      reset a' dep
@@ -352,10 +355,10 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _ _) = "digraph G {\n\t"
         vars = Prelude.zip [1..] allVars
 
         -- a reverse lookup map for vars
-        rev = Map.fromList $ map swap vars
+        rev = Lut.fromList $ map swap vars
 
         -- a lookup function for rev
-        index v = fromMaybe 0 $ Map.lookup v rev
+        index v = fromMaybe 0 $ Lut.lookup v rev
 
         -- computes the list of dependencies
         deps = foldr go [] vars
