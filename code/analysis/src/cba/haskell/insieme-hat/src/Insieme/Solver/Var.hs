@@ -37,7 +37,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Insieme.Solver.Var 
+module Insieme.Solver.Var
     ( Var
     , varIdent
     , constraints
@@ -65,7 +65,7 @@ import Insieme.Solver.Lattice
 -- * Analysis Variables ---------------------------------------
 
 -- | General variables (management)
-data Var = MkVar 
+data Var = MkVar
     { _varIdent    :: Identifier
         -- ^ the variable identifier
     , _constraints :: [Constraint]

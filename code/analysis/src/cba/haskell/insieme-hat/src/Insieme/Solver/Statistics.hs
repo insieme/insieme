@@ -60,15 +60,18 @@ import Insieme.Solver.AssignmentView
 showSolverStatistics :: SolverStats -> String
 showSolverStatistics SolverStats {..} = unlines
   [ "========================================================= Solver Statistic =============================================================================================="
-  , "             Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]               Resets           Resets/Var "
+  , "             Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Upd[us]               Resets           Resets/Var "
   , "========================================================================================================================================================================="
   , unlines $ map showAnalysisStats analysesStats
   , "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   , "               Total: " ++ concat
         [ printf "%20d" varsTotal
-        , printf " %20d" updatesTotal, printf " %20.3f" updatesPerVar
-        , printf " %20d" (round (pico_to_micro_sec timeTotal) :: Integer),    printf " %20.3f" (pico_to_micro_sec timePerVar)
-        , printf " %20d" resetsTotal,  printf " %20.3f" resetsPerVar
+        , printf " %20d" updatesTotal
+        , printf " %20.3f" updatesPerVar
+        , printf " %20d" (round (pico_to_micro_sec timeTotal) :: Integer)
+        , printf " %20.3f" (pico_to_micro_sec timePerUpd)
+        , printf " %20d" resetsTotal
+        , printf " %20.3f" resetsPerVar
         ]
   , "========================================================================================================================================================================="
   , showVarDependencyStats variableStats
@@ -80,7 +83,7 @@ pico_to_micro_sec a =  (realToFrac a / (10^6))
 
 showGipedaSolverStatistics :: String -> SolverStats -> String
 showGipedaSolverStatistics keyPostfix SolverStats {..} =
-  unlines $ map (\(k,v) -> k ++ ";" ++ v) $ postfix ("/" ++ keyPostfix) $ concat $ 
+  unlines $ map (\(k,v) -> k ++ ";" ++ v) $ postfix ("/" ++ keyPostfix) $ concat $
     [ prefix "solver/" $ postfix "/totals" $
       [ value "vars"    varsTotal
       , value "updates" updatesTotal
@@ -88,7 +91,7 @@ showGipedaSolverStatistics keyPostfix SolverStats {..} =
       , value "resets"  resetsTotal
       ]
     , prefix "solver/" $ concat $
-        flip concatMap analysesStats $ \AnalysisStats {..} -> 
+        flip concatMap analysesStats $ \AnalysisStats {..} ->
           [ postfix ("/per_analysis/" ++ show asAnalysisId) $ concat
               [ [value "vars"     asVars]
               , [value "updates"  asUpdates]
@@ -101,7 +104,7 @@ showGipedaSolverStatistics keyPostfix SolverStats {..} =
               , value "resets"   asResetsPerVar
               ]
           ]
-    , case gcStats of 
+    , case gcStats of
         Nothing -> []
         Just GCStats {..} -> prefix "gc/" $
           [ value "total_gcs" numGcs
@@ -126,18 +129,18 @@ showGipedaSolverStatistics keyPostfix SolverStats {..} =
     value key a = (key, show a)
 
 showAnalysisStats :: AnalysisStats -> String
-showAnalysisStats AnalysisStats {..} = 
-    printf " %20s: %20d %20d %20.3f %20d %20.3f %20d %20.3f" 
+showAnalysisStats AnalysisStats {..} =
+    printf "%20s: %20d %20d %20.3f %20d %20.3f %20d %20.3f"
         (show asAnalysisId)
         asVars
         asUpdates
         asUpdatesPerVar
         (round (pico_to_micro_sec asTime) :: Integer)
-        (pico_to_micro_sec asTimePerVar)
+        (pico_to_micro_sec asTimePerUpd)
         asResets
         asResetsPerVar
 
-data SolverStats = 
+data SolverStats =
     SolverStats
     { varsTotal     :: Integer
     , updatesTotal  :: Integer
@@ -146,14 +149,15 @@ data SolverStats =
 
     , updatesPerVar :: Float
     , timePerVar    :: Float
+    , timePerUpd    :: Float
     , resetsPerVar  :: Float
-      
+
     , analysesStats :: [AnalysisStats]
     , variableStats :: VarDependencyStats
     , gcStats       :: Maybe GCStats
     }
 
-data AnalysisStats = 
+data AnalysisStats =
     AnalysisStats
     { asAnalysisId    :: AnalysisIdentifier
     , asVars          :: Integer
@@ -164,15 +168,17 @@ data AnalysisStats =
     , asUpdatesPerVar :: Float
     , asTimePerVar    :: Float
     , asResetsPerVar  :: Float
+
+    , asTimePerUpd    :: Float
     }
 
 solverStats :: SolverState -> Maybe GCStats -> SolverStats
-solverStats s@SolverState 
+solverStats s@SolverState
                     { numSteps  = Map.map toInteger -> numSteps
                     , numResets = Map.map toInteger -> numResets
                     , cpuTimes  = cpuTimes
                     } gcStats =
-    SolverStats {..} 
+    SolverStats {..}
   where
     vars = knownVariables $ variableIndex s
 
@@ -185,11 +191,16 @@ solverStats s@SolverState
     timePerVar    = perVar timeTotal
     resetsPerVar  = perVar resetsTotal
 
+    timePerUpd    = perUpd timeTotal
+
     perVar :: Integer -> Float
     perVar x = fromInteger x / fromInteger varsTotal
 
+    perUpd :: Integer -> Float
+    perUpd x = fromInteger x / fromInteger updatesTotal
+
     analysisVars :: Map AnalysisIdentifier Integer
-    analysisVars = Map.fromListWith (+) $ 
+    analysisVars = Map.fromListWith (+) $
       map (\v -> (analysis (varIdent v), 1)) $ Set.toList vars
 
     analysesStats = Map.elems $ Map.mapWithKey go analyses_map
@@ -197,33 +208,38 @@ solverStats s@SolverState
 
     analyses_map
         :: Map AnalysisIdentifier (Integer, (Integer, (Integer, Integer)))
-    analyses_map = 
+    analyses_map =
         analysisVars >< numSteps >< cpuTimes >< numResets
 
-    go asAnalysisId (asVars, (asUpdates, (asTime, asResets))) = 
+    go asAnalysisId (asVars, (asUpdates, (asTime, asResets))) =
         AnalysisStats {..}
       where
         asUpdatesPerVar = perAnlyVar asUpdates
         asTimePerVar    = perAnlyVar asTime
         asResetsPerVar  = perAnlyVar asResets
-        
+
+        asTimePerUpd    = perAnlyUpd asTime
+
         perAnlyVar :: Integer -> Float
         perAnlyVar x = fromInteger x / fromInteger asVars
+
+        perAnlyUpd :: Integer -> Float
+        perAnlyUpd x = fromInteger x / fromInteger asUpdates
 
     -- | Stick maps with the same key type together into a tupel.
     (><) :: Ord k => Map k a -> Map k b -> Map k (a,b)
     (><) = Map.intersectionWith (,)
     infixr 9 ><
 
-data VarDependencyStats = 
+data VarDependencyStats =
     VarDependencyStats
     { vdsNumSCCs     :: Int
     , vdsLargestSCCs :: [Int]
     }
 
 varDependencyStats :: SolverState -> VarDependencyStats
-varDependencyStats s = 
-    VarDependencyStats 
+varDependencyStats s =
+    VarDependencyStats
     { vdsNumSCCs     = 0 -- length sccs
     , vdsLargestSCCs = [] -- take 10 $ reverse $ sort $ length . Graph.flattenSCC <$> sccs
     }

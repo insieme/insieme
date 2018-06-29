@@ -87,7 +87,7 @@ data Identifier = Identifier {
 
 
 instance Show Identifier where
-        show (Identifier a v _) = (show a) ++ "/" ++ (show v)
+        show (Identifier _ v a) = (show a) ++ "/" ++ (show v)
 
 instance Hashable Identifier  where
     hashWithSalt s Identifier {idHash} = hashWithSalt s idHash

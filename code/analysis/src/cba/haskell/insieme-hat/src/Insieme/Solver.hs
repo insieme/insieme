@@ -98,6 +98,8 @@ module Insieme.Solver (
 
 ) where
 
+import Debug.Trace
+
 import Prelude hiding (lookup,print)
 import Control.Arrow
 import Control.Exception
@@ -165,7 +167,7 @@ getAllDep :: Dependencies -> IndexedVar -> Set IndexedVar
 getAllDep d i = collect [i] Set.empty
   where
     collect [] s = s
-    collect (v:vs) s = 
+    collect (v:vs) s =
         let deps = getDep d v in
         let nvs = Set.difference deps s in
         collect (Set.toList nvs ++ vs) (Set.union nvs s)
@@ -211,7 +213,7 @@ solve initial vs = case violations of
         violations = mapMaybe (flip check $ res) allConstraints
 
         -- print utility formatting violations
-        print v = (violationMsg v) ++ "\n\t\tshould: " ++ (violationShouldValue v) 
+        print v = (violationMsg v) ++ "\n\t\tshould: " ++ (violationShouldValue v)
                                    ++ "\n\t\t    is: " ++ (violationIsValue v)
 
 
@@ -234,10 +236,15 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 -- solveStep s _ [] | trace (showSolverStatistics s) $ False = undefined                                                 -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
+-- add periodic debugging messages
+solveStep s _ _ | enable_tracing && trace ("Time step " ++ (show $ totalSteps s) ++ "\n" ++ (showSolverStatistics $ solverStats s Nothing)) False = undefined
+  where
+    enable_tracing = num_steps_between_statistic_prints > 0 && (totalSteps s) `mod` num_steps_between_statistic_prints == 0
+
 -- compute next element in work list
 
-solveStep (SolverState !a !i u t r) d (v:vs) =
-    solveStep (SolverState resAss resIndex nu nt nr) resDep ds
+solveStep (SolverState !a !i u t r s) d (v:vs) =
+    solveStep (SolverState resAss resIndex nu nt nr (s+1)) resDep ds
   where
     -- profiling --
     ((resAss,resIndex,resDep,ds,numResets),dt) = measure go ()
@@ -252,24 +259,24 @@ solveStep (SolverState !a !i u t r) d (v:vs) =
     -- | update all constraints of current variable
     go () = foldr processConstraint (a,i,d,vs,0) $ constraints (ivVar v)
 
-    processConstraint c (a, i, d, dv, numResets) = 
+    processConstraint c (a, i, d, dv, numResets) =
         case update c fa of
           -- nothing changed, we are fine
           (a', None)      -> (a', ni, nd, nv, numResets)
 
           -- add depending variables to work list
           (a', Increment) -> (a', ni, nd, uv ++ nv, numResets)
-        
+
           -- handling a local reset
           (a', Reset)     -> (ra, ni, nd, uv ++ nv, numResets+1)
             where
               dep = getAllDep nd trg
-            
-              ra | not (Set.member trg dep) = 
+
+              ra | not (Set.member trg dep) =
                      -- if variable is not indirectly depending on itself reset
                      -- all depending variables to their bottom value
-                     reset a' dep 
-            
+                     reset a' dep
+
                  | otherwise                 =
                      -- otherwise insist on merging reseted value with current
                      -- state
@@ -317,7 +324,7 @@ escape str = concat $ escape' <$> str
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
+toDotGraph (SolverState a@(Assignment _) varIndex _ _ _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
@@ -477,4 +484,3 @@ dumpToJsonFile :: I.Tree -> SolverState -> String -> String
 dumpToJsonFile root s file = unsafePerformIO $ do
          LBS.writeFile (file ++ ".json") $ toJsonMetaFile root s
          return ("Dumped assignment into file " ++ file ++ ".json!")
-

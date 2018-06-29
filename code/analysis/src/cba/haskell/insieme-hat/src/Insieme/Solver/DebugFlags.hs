@@ -41,3 +41,6 @@ module Insieme.Solver.DebugFlags where
 check_consistency :: Bool
 check_consistency = False
 
+-- | An option to trace the progress of the solver, negative to disable
+num_steps_between_statistic_prints :: Int
+num_steps_between_statistic_prints = -1 -- 1000000

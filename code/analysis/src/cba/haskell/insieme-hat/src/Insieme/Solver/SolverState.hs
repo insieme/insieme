@@ -59,7 +59,8 @@ data SolverState = SolverState
     , numSteps      :: !(Map AnalysisIdentifier Int)
     , cpuTimes      :: !(Map AnalysisIdentifier Integer)
     , numResets     :: !(Map AnalysisIdentifier Int)
+    , totalSteps    :: Int
     }
 
 initState :: SolverState
-initState = SolverState Assignment.empty VarIndex.empty Map.empty Map.empty Map.empty
+initState = SolverState Assignment.empty VarIndex.empty Map.empty Map.empty Map.empty 0
