@@ -48,6 +48,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.ByteString.Char8 as BS8
 
 import Data.List
+import Data.Maybe
 
 import qualified Insieme.Inspire as I
 
@@ -63,6 +64,10 @@ pprintTree :: I.Tree -> String
 --    free pretty_c
 --    return pretty
 
+-- everything that is a built-in - use the built in name
+pprintTree n | isJust tag = fromJust tag
+  where
+    tag = I.getBuiltinTag n
 
 -- support node types
 pprintTree (I.Node (I.StringValue s) _) = s

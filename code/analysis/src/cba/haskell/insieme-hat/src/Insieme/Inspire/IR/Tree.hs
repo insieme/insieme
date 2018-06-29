@@ -128,5 +128,11 @@ isAnyOfBuiltin s t = any (flip Set.member s) $ builtinTags $ getBuiltinTarget t
 isaBuiltin :: Tree -> Bool
 isaBuiltin t = not $ null $ builtinTags $ getBuiltinTarget t
 
+getBuiltinTag :: Tree -> Maybe String
+getBuiltinTag t = if null names then Nothing else Just $ head names
+  where
+    tags = builtinTags $ getBuiltinTarget t
+    names = filter (/="tag_materializing") tags
+
 hasMaterializingTag :: Tree -> Bool
 hasMaterializingTag n = isBuiltin n "tag_materializing"
