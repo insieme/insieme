@@ -69,7 +69,14 @@ namespace internal {
 
 		return transform::transformBottomUp(code,[&](const NodePtr& node)->NodePtr {
 
-			// only interested in calls
+			// fix special literal 1 of type 'a (from some generic built-in source)
+			if (auto lit = node.isa<LiteralPtr>()) {
+				if (lit->getStringValue() == "1" && lit->getType().isa<TypeVariablePtr>()) {
+					return builder.uintLit(1,true);
+				}
+			}
+
+			// other than that: only interested in calls
 			auto call = node.isa<CallExprPtr>();
 			if (!call) return node;
 
@@ -155,9 +162,20 @@ namespace internal {
 				// done
 				return res;
 
-			} catch (const core::types::ReturnTypeDeductionException&) {
+			} catch (const core::types::ReturnTypeDeductionException& rtde) {
 
 				// if there is a deduction error, skip the re-typing
+				std::cerr << "WARNING: unable to deduce return type of haskell-build IR expression:\n"
+						<< "\tFunction Type:  " << *call->getFunctionExpr()->getType() << "\n"
+						<< "\tArgument Types: (" << join(",",call->getArgumentList(),[](std::ostream& out, const ExpressionPtr& expr){
+								out << *expr->getType();
+							}) << ")\n"
+						<< "\tFunction: " << dumpReadable(call->getFunctionExpr()) << "\n"
+						<< "\tArguments:\n" << join("\n",call->getArgumentList(),[](std::ostream& out, const ExpressionPtr& expr) {
+								out << "\t\t" << dumpOneLine(expr) << " : " << *expr->getType();
+							}) << "\n"
+						<< "\tWhat: " << rtde.what();
+
 				// results will be false, but debugging by investigating
 				// assignments will be enabled
 				return call;
