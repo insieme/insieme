@@ -273,7 +273,7 @@ std::vector<Location> getLocationStack(const NodeAddress& addr) {
 
 		// collect the current location
 		auto loc = getLocation(cur);
-		if (loc) res.push_back(*loc);
+		if (loc && (res.empty() || res.back() != loc)) res.push_back(*loc);
 
 		// go to next
 		cur = cur.getParentAddress();
