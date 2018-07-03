@@ -175,7 +175,7 @@ fromList as = fromSet $ Set.fromList as
 -- 'Universe'.
 toSet :: (IsBound bb, SetKey a) => BoundSet bb a -> Set a
 toSet  Universe    = error "Cannot convert Universe :: UnboundSet to set"
-toSet (BoundSet s) = Set.fromList $ Set.toList s
+toSet (BoundSet s) = s
 
 -- Convert a 'BoundSet' to a list, throws an error when used with 'Universe'.
 toList :: (HasCallStack) => BoundSet bb a -> [a]
