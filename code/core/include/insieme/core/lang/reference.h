@@ -532,6 +532,17 @@ namespace lang {
 	/// Returns true is node is either GenPreInc, GenPostInc, GenPreDec or GenPostDec, or a call to any of them
 	bool isRefMathOp(const NodePtr& node);
 
+	/**
+	 * Builds a cast to the given type using the minimal means if possible.
+	 */
+	ExpressionPtr buildCastTo(const ExpressionPtr& refExpr, const TypePtr& targetType);
+
+	/**
+	 * Collapses a nested sequence of ref casts into a single or no cast. If the given
+	 * expression is not a reference cast, the given value is returned.
+	 */
+	ExpressionPtr collapseRefCasts(const ExpressionPtr& value);
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

@@ -472,6 +472,53 @@ namespace lang {
 		return rExt.isGenPostDec(node) || rExt.isGenPostInc(node) || rExt.isGenPreDec(node) || rExt.isGenPreInc(node);
 	}
 
+
+	ExpressionPtr buildCastTo(const ExpressionPtr& refExpr, const TypePtr& trgType) {
+		auto srcType = refExpr->getType();
+		assert_pred1(isReference,srcType);
+		assert_pred1(isReference,trgType);
+
+		// if there is no cast necessary, we are done
+		if (*srcType == *trgType) return refExpr;
+
+		// parse types
+		auto srcRef = ReferenceType(srcType);
+		auto trgRef = ReferenceType(trgType);
+
+		// check for the hard stuff first
+		if (*srcRef.getElementType() != *trgRef.getElementType()) {
+			// we need a reinterpret cast
+			auto res = buildRefReinterpret(refExpr,trgType);
+			// and if necessary also a kind and modifier cast
+			return buildCastTo(res,trgType);
+		}
+
+		// otherwise use a ref_cast
+		return buildRefCast(refExpr,trgType);
+	}
+
+
+	ExpressionPtr collapseRefCasts(const ExpressionPtr& value) {
+
+		// ignore non-reference value
+		if (!isReference(value)) return value;
+
+		// search for the core value
+		auto src = value;
+
+		// search for innermost value that is not the result of a cast (the source)
+		while(!analysis::isMaterializingCall(src) && isAnyRefCast(src) && !analysis::isMaterializingDecl(src.as<CallExprPtr>()->getArgumentDeclaration(0))) {
+			src = src.as<CallExprPtr>()->getArgument(0);
+		}
+
+		// if there is nothing to collapse => skip
+		if (src == value) return value;
+
+		// perform all casts in one step
+		return buildCastTo(src,value->getType());
+	}
+
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
