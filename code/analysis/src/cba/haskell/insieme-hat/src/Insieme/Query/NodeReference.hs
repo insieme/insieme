@@ -41,11 +41,14 @@ module Insieme.Query.NodeReference where
 
 import Control.Monad
 import Data.List
-import Data.Set (Set)
+import Data.AbstractSet (Set)
 import Data.Maybe
 
 import Insieme.Inspire (NodeReference(..), node)
 import Insieme.Inspire.SourceParser
+import Insieme.Inspire.IR.HashCons (memo)
+
+import qualified Data.AbstractSet as Set
 import qualified Insieme.Inspire.IR as IR
 
 type NodeLike a = (IR.NodeLike a, NodeReference a)
@@ -469,3 +472,18 @@ isOperator a n = fromMaybe False $ (==n) <$> getLiteralValue a
 
 isGenericFunctionInstantiator :: (NodeLike a) => a -> Bool
 isGenericFunctionInstantiator n = any (isBuiltin n) ["instantiate_fun","instantiate_ctor","instantiate_dtor","instantiate_member"]
+
+
+-- ** Free Variable collection
+
+getFreeVariables :: (NodeLike a) => a -> Set IR.Tree
+getFreeVariables n = getFreeVariables' $ node n
+
+getFreeVariables' :: IR.Tree -> Set IR.Tree
+getFreeVariables' = memo collect
+  where
+    -- TODO: add support for bind and variable declarations in CompoundStmt
+    collect v | isVariable v   = Set.singleton v
+    collect t | isType t       = Set.empty
+    collect l | isLambdaExpr l = Set.empty
+    collect n = foldr Set.union Set.empty $ getFreeVariables <$> children n
