@@ -363,6 +363,9 @@ isExpression = (==IR.Expression) . IR.toNodeKind . IR.getNodeType . node
 
 -- *** Lambda Expressions
 
+isLambdaExpr :: NodeLike a => a -> Bool
+isLambdaExpr a = getNodeType a == IR.LambdaExpr
+
 getLambda :: NodeLike a => a -> Maybe a
 getLambda a = case () of
 
