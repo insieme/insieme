@@ -132,16 +132,12 @@ genericSymbolicValue slice_functions userDefinedAnalysis addr = case getNodeType
     IR.CallExpr -> adapted
 
     -- for all others, just forward internal value
-    _ -> value
+    _ -> inner  -- NOTE: in this case a S or S' variable may be produced
 
   where
 
     -- get the variable representing the actual value
     inner = genericSymbolicValue' slice_functions userDefinedAnalysis addr
-
-    -- the standard forwarded value, not adapted
-    value = Solver.mkVariable varId [fwd] Solver.bot
-    fwd = Solver.forward inner value
 
     -- a possibly adapted forwarded value
     adapted = Solver.mkVariable varId [con] Solver.bot
