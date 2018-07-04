@@ -35,6 +35,8 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Insieme.Solver.AssignmentView
     ( AssignmentView(..)
     , get
@@ -42,27 +44,55 @@ module Insieme.Solver.AssignmentView
     ) where
 
 import GHC.Stack
+import Debug.Trace
 
 import Data.Typeable
+import Data.Maybe
+import Data.List
 
 import {-# SOURCE #-} Insieme.Solver.Var
+import Insieme.Solver.VariableIndex
 import Insieme.Solver.Assignment
 import Insieme.Solver.DebugFlags
 
 -- Assignment Views ----------------------------------------
 
 data AssignmentView = UnfilteredView Assignment
+                    | IndirectView VariableIndex Assignment
                     | FilteredView [Var] Assignment
 
-get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
+get :: forall a. (HasCallStack, Typeable a, Eq a, Show a) => AssignmentView -> TypedVar a -> a
 get (UnfilteredView a) v = get' a v
-get (FilteredView vs a) v = case () of 
+
+get (IndirectView vi a) v = get' a sv
+  where
+    sv = TypedVar $ fromMaybe pv $ varToMaybeSharedVar vi pv
+    pv = toVar v
+
+get (FilteredView vs a) v = case () of
     _ | not check_consistency || elem (toVar v) vs -> res
     _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
   where
-    res = get' a v
+    res = case () of
+        _ | not check_consistency || res_clean == res_dirty -> res_clean
+          | otherwise -> error ("Different values for variable " ++ (show v) ++ ": " ++ (show res_clean) ++ " vs. " ++ (show res_dirty) ++ "\n\tBottom Values: " ++ (show clean_default) ++ " vs " ++ (show dirty_default))
+      where
+
+        -- clean and dirty solution
+        res_clean = get' a clean_v
+        res_dirty = get' a v
+
+        clean_default :: a
+        clean_default = maybeValToBottom (toVar clean_v) Nothing
+
+        dirty_default :: a
+        dirty_default = maybeValToBottom (toVar v) Nothing
+
+    clean_v :: TypedVar a
+    clean_v = fromMaybe v $ TypedVar <$> find (==toVar v) vs
+
 
 stripFilter :: AssignmentView -> Assignment
 stripFilter (UnfilteredView a) = a
+stripFilter (IndirectView _ a) = a
 stripFilter (FilteredView _ a) = a
-

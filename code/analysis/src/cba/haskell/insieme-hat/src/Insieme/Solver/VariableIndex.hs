@@ -48,6 +48,8 @@ module Insieme.Solver.VariableIndex
     , knownVariables
     , varToIndexedVar
     , varsToIndexedVars
+    , varToMaybeSharedVar
+    , varToSharedVar
     ) where
 
 import Data.Maybe
@@ -115,3 +117,11 @@ varsToIndexedVars i vs = foldr go ([],i) vs
         go v (rs,i') = (r:rs,i'')
             where
                 (r,i'') = varToIndexedVar i' v
+
+varToMaybeSharedVar :: VariableIndex -> Var -> Maybe Var
+varToMaybeSharedVar (VariableIndex _ m) v = ivVar <$> VarMap.lookup v m
+
+varToSharedVar :: VariableIndex -> Var -> Var
+varToSharedVar i v = r
+  where
+    Just r = varToMaybeSharedVar i v
