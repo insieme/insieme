@@ -57,6 +57,9 @@ import Insieme.Solver.DebugFlags
 
 -- Assignment Views ----------------------------------------
 
+use_filter :: Bool
+use_filter = False
+
 data AssignmentView = UnfilteredView Assignment
                     | IndirectView VariableIndex Assignment
                     | FilteredView [Var] Assignment
@@ -64,7 +67,7 @@ data AssignmentView = UnfilteredView Assignment
 get :: forall a. (HasCallStack, Typeable a, Eq a, Show a) => AssignmentView -> TypedVar a -> a
 get (UnfilteredView a) v = get' a v
 
-get (IndirectView vi a) v = get' a sv
+get (IndirectView vi a) v = get' a $ if use_filter then sv else v
   where
     sv = TypedVar $ fromMaybe pv $ varToMaybeSharedVar vi pv
     pv = toVar v
@@ -74,7 +77,7 @@ get (FilteredView vs a) v = case () of
     _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
   where
     res = case () of
-        _ | not check_consistency || res_clean == res_dirty -> res_clean
+        _ | not check_consistency || res_clean == res_dirty -> if use_filter then res_clean else res_dirty
           | otherwise -> error ("Different values for variable " ++ (show v) ++ ": " ++ (show res_clean) ++ " vs. " ++ (show res_dirty) ++ "\n\tBottom Values: " ++ (show clean_default) ++ " vs " ++ (show dirty_default))
       where
 
