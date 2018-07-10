@@ -447,7 +447,8 @@ namespace backend {
 		const TypeInfo* TypeInfoStore::resolveNumericType(ConversionContext& context, const core::NumericTypePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 			assert_eq(ptr->getValue()->getNodeType(), core::NT_Literal) << "Non-literal numeric types should not reach the backend";
-			auto ident = manager.create<c_ast::Identifier>(ptr->getValue().as<core::LiteralPtr>()->getStringValue());
+			const auto& value = ptr->getValue().as<core::LiteralPtr>()->getStringValue();
+			auto ident = manager.create<c_ast::Identifier>(ptr.getNodeManager().getLangBasic().isSignedInt(ptr->getValue()->getType()) ? value : value + "u");
 			c_ast::TypePtr numType = manager.create<c_ast::IntegralType>(ident);
 			return type_info_utils::createInfo(numType);
 		}

@@ -1,0 +1,3 @@
+includes=${includes},"intercepted"
+intercepted_header_file_dirs=${intercepted_header_file_dirs},"intercepted"
+compFlags[insiemecc_seq_cpp_compile]="-Werror" # in order for the warning about too large unsigned template parameters to be detected
