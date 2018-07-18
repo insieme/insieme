@@ -253,10 +253,27 @@ namespace utils {
 	}
 
 	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm) {
+		// these are lambda captures
 		if(fieldDecl->isImplicit() && !fieldDecl->isAnonymousStructOrUnion()) {
+			// try to determine name for capture based on captured variables' name
+			auto classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(fieldDecl->getParent());
+			if(classDecl) {
+				llvm::DenseMap<const clang::VarDecl*, clang::FieldDecl*> clangCaptures;
+				clang::FieldDecl *thisField;
+				classDecl->getCaptureFields(clangCaptures, thisField);
+				for(auto capture : clangCaptures) {
+					if(capture.second == fieldDecl) {
+						auto varName = capture.first->getNameAsString();
+						if(!varName.empty()) return format("capture_%s", varName.c_str());
+					}
+				}
+			}
+			// else, fall back to index
 			return format("capture_%u", fieldDecl->getFieldIndex());
 		}
-        string fieldName = fieldDecl->getNameAsString();
+
+		// these are anonymous fields
+		string fieldName = fieldDecl->getNameAsString();
 		if(fieldName.empty() || fieldDecl->isAnonymousStructOrUnion()) {
 			auto fileName = sm.getFilename(fieldDecl->getLocStart()).str();
 			auto line = sm.getExpansionLineNumber(fieldDecl->getLocStart());
@@ -265,7 +282,7 @@ namespace utils {
 			return insieme::utils::mangle(fileName, line, column);
 		}
 
-		// in this case we return the original name itself
+		// in other cases we return the original name itself
 		return fieldName;
 	}
 

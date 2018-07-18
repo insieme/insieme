@@ -62,9 +62,9 @@ int main() {
 	// everything is normal though if the const variable isn't initialized with a constant integer literal
 	#pragma test expect_ir(R"(
 		def struct __any_string__lambda {
-			capture_0 : ref<int<4>,t,f,cpp_ref>;
+			capture_N : ref<int<4>,t,f,cpp_ref>;
 			const function IMP__operator_call_ = () -> unit {
-				var ref<int<4>,f,f,plain> v1 = **(this).capture_0;
+				var ref<int<4>,f,f,plain> v1 = **(this).capture_N;
 			}
 		};
 		{

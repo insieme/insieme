@@ -86,9 +86,9 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct __any_string__class {
-			capture_0 : int<4>;
+			capture_captureCopy : int<4>;
 			const function IMP__operator_call_ = () -> unit {
-				(this).capture_0;
+				(this).capture_captureCopy;
 			}
 		};
 		{
@@ -105,9 +105,9 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct __any_string__class {
-			capture_0 : int<4>;
+			capture_captureCopy : int<4>;
 			function IMP__operator_call_ = () -> unit {
-				(this).capture_0 = 5;
+				(this).capture_captureCopy = 5;
 			}
 		};
 		{
@@ -124,9 +124,9 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct __any_string__class {
-			__any_string__field : ref<int<4>,f,f,cpp_ref>;
+			capture_captureRef : ref<int<4>,f,f,cpp_ref>;
 			const function IMP__operator_call_ = () -> unit {
-				ref_kind_cast(*(this).__any_string__field, type_lit(plain)) = 5;
+				ref_kind_cast(*(this).capture_captureRef, type_lit(plain)) = 5;
 			}
 		};
 		{
@@ -161,8 +161,8 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct __any_string__class {
-			capture_0 : int<4>;
-			capture_1 : ref<int<4>,f,f,cpp_ref>;
+			capture_captureCopy : int<4>;
+			capture_captureRef : ref<int<4>,f,f,cpp_ref>;
 			const function IMP__operator_call_ = (v1 : ref<int<4>,f,f,plain>) -> unit {
 				5;
 			}
@@ -228,15 +228,15 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct __any_string__inner {
-			capture_0 : ref<int<4>,t,f,cpp_ref>;
+			capture_num : ref<int<4>,t,f,cpp_ref>;
 			const function IMP__operator_call_ = () -> int<4> {
-				return **(this).capture_0;
+				return **(this).capture_num;
 			}
 		};
 		def struct __any_string__outer {
-			capture_0 : int<4>;
+			capture_num : int<4>;
 			const function IMP__operator_call_ = () -> int<4> {
-				var ref<__any_string__inner,f,f,plain> v1 = ref_cast(<ref<__any_string__inner,f,f,plain>>(ref_temp(type_lit(__any_string__inner))) {ref_kind_cast((this).capture_0, type_lit(cpp_ref))}, type_lit(f), type_lit(f), type_lit(cpp_rref));
+				var ref<__any_string__inner,f,f,plain> v1 = ref_cast(<ref<__any_string__inner,f,f,plain>>(ref_temp(type_lit(__any_string__inner))) {ref_kind_cast((this).capture_num, type_lit(cpp_ref))}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 				return v1.IMP__operator_call_();
 			}
 		};
@@ -364,9 +364,9 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct __any_string__class {
-			capture_0 : int<4>;
+			capture_n : int<4>;
 			const function IMP__operator_call_ = () -> unit {
-				(this).capture_0;
+				(this).capture_n;
 			}
 		};
 		{

@@ -56,9 +56,9 @@ int main() {
 			}
 		};
 		def struct __any_string__lambda_class {
-			capture_0 : IMP_C;
+			capture_c : IMP_C;
 			const function IMP__operator_call_ = () -> unit {
-				(this).capture_0.IMP_get();
+				(this).capture_c.IMP_get();
 			}
 		};
 		{

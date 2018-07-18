@@ -70,15 +70,15 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct __any_string__class_int {
-			capture_0 : ref<int<4>,f,f,cpp_ref>;
+			capture_a : ref<int<4>,f,f,cpp_ref>;
 			const function IMP__operator_call_ = () -> unit {
-				(this).capture_0;
+				(this).capture_a;
 			}
 		};
 		def struct __any_string__class_real {
-			capture_0 : ref<real<4>,f,f,cpp_ref>;
+			capture_a : ref<real<4>,f,f,cpp_ref>;
 			const function IMP__operator_call_ = () -> unit {
-				(this).capture_0;
+				(this).capture_a;
 			}
 		};
 		def IMP_templateFunWithLambda_int_returns_void = function () -> unit {
