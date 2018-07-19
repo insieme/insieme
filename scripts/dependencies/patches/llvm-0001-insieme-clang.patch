@@ -235,3 +235,14 @@
  
        if (MSInfo->getTemplateSpecializationKind()
              == TSK_ExplicitSpecialization)
+--- a/include/llvm/IR/ValueMap.h	2018-07-19 08:33:58.264625264 +0200
++++ b/include/llvm/IR/ValueMap.h2	2018-07-19 08:33:46.919466960 +0200
+@@ -101,7 +101,7 @@
+ 
+   ~ValueMap() {}
+ 
+-  bool hasMD() const { return MDMap; }
++  bool hasMD() const { return (bool)MDMap; }
+   MDMapT &MD() {
+     if (!MDMap)
+       MDMap.reset(new MDMapT);
