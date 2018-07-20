@@ -295,7 +295,7 @@ namespace c_ast {
 
 			return result;
 
-		} catch(not_a_dag e) {
+		} catch(const not_a_dag& e) {
 			// failed => not resolvable cyclic dependencies
 			assert_fail() << "Impossible to resolve cyclic dependencies.";
 		}

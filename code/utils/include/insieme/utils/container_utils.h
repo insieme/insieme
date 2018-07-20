@@ -172,7 +172,7 @@ inline Result transform(const SimpleMapLikeContainer<K, V>& m, const Functor& f)
 template <template <typename, typename, typename, typename> class MapLikeContainer, typename Functor, typename T, typename K, typename V, typename C,
           template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
           typename Result = MapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type,
-                                             std::less<typename ResultMember::first_type>, A<ResultMember>>>
+                                             std::less<typename ResultMember::first_type>, A<std::pair<const typename ResultMember::first_type, typename ResultMember::second_type>>>>
 inline Result transform(const MapLikeContainer<K, V, C, A<T>>& m, const Functor& f) {
 	Result res;
 	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
@@ -212,7 +212,7 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 template <template <typename, typename, typename, typename> class TargetMapLikeContainer, template <typename, typename> class Container, typename Functor,
           typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
           typename Result = TargetMapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type,
-                                                   std::less<typename ResultMember::first_type>, A<ResultMember>>>
+                                                   std::less<typename ResultMember::first_type>, A<std::pair<const typename ResultMember::first_type, typename ResultMember::second_type>>>>
 inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 	Result res;
 	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);

@@ -91,7 +91,7 @@ namespace tasks {
 									jobAddresses.push_back(job);
 									return true;
 								}
-							} catch(arithmetic::NotAFormulaException) {}
+							} catch(const arithmetic::NotAFormulaException&) {}
 						}
 					}
 					return false;

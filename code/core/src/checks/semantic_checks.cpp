@@ -142,7 +142,7 @@ namespace checks {
 				try {
 					auto constraint = arithmetic::toConstraint(cond);
 					infiniteLoop = constraint.isValid();
-				} catch(arithmetic::NotAConstraintException) { /* not a constraint, not our problem */ }
+				} catch(const arithmetic::NotAConstraintException&) { /* not a constraint, not our problem */ }
 				LOG(DEBUG) << " --> infinite? " << infiniteLoop;
 				return visit(whileStmt->getBody(), infiniteLoop);
 			}

@@ -173,7 +173,7 @@ namespace types {
 			try {
 				// compute (reverse) topological order
 				boost::topological_sort(graph, std::back_inserter(order));
-			} catch(boost::not_a_dag e) { assert_fail() << "There should not be any cycles!"; }
+			} catch(const boost::not_a_dag& e) { assert_fail() << "There should not be any cycles!"; }
 
 			// reverse order and return result
 			return reverse(order);

@@ -98,7 +98,7 @@ namespace features {
 						if(formula.isInteger() && stepFormula.isInteger()) {
 							loopIters = (unsigned long long) (formula.getIntegerValue() / stepFormula.getIntegerValue());
 						}
-					} catch (core::arithmetic::NotAFormulaException ex) {
+					} catch (const core::arithmetic::NotAFormulaException& ex) {
 						//ignore
 					}
 					effort += EFFORT_LOOP + loopIters * (estimateEffortInternal(forStmt->getBody()) + EFFORT_LOOP_STEP + EFFORT_LOOP_COMPARISON);
