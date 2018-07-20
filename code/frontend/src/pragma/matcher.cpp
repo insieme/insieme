@@ -46,6 +46,7 @@ Ident__has_declspec;\
 friend struct insieme::frontend::pragma::cpp_string_lit_p
 
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #include <clang/Lex/Preprocessor.h>
 #pragma GCC diagnostic pop
