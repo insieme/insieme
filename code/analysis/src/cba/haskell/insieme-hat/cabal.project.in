@@ -12,6 +12,9 @@ extra-lib-dirs: @PROJECT_BINARY_DIR@/analysis
 program-locations
   gcc-location: @HASKELL_C_COMPILER@
 
+
+optimization: 2
+
 package insieme-hat
     ghc-options: -j -pgmc @HASKELL_C_COMPILER@ -pgml @HASKELL_C_COMPILER@ -pgma @HASKELL_C_COMPILER@ -optl-Wl,-rpath,@PROJECT_BINARY_DIR@/analysis:@PROJECT_BINARY_DIR@/annotations:@PROJECT_BINARY_DIR@/backend:@PROJECT_BINARY_DIR@/core:@PROJECT_BINARY_DIR@/common:@PROJECT_BINARY_DIR@/frontend:@PROJECT_BINARY_DIR@/transform:@PROJECT_BINARY_DIR@/utils   -fspecialise-aggressively -flate-dmd-anal -fmax-simplifier-iterations=10
     benchmarks: true

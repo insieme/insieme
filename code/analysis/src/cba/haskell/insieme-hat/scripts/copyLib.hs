@@ -49,6 +49,14 @@ import System.FilePath
 import System.Process
 import System.Posix.Directory
 
+
+-- hardcoded :/
+--
+-- we switched to using the $BUILDDIR as the root of things instead of distdir
+-- because we want to be able to use the pinned compiler in "third_party/ghc"
+distdir_path builddir = builddir </> "hat-vanilla-project" </> "dist-newstyle"
+
+
 getCabalFile :: FilePath -> IO FilePath
 getCabalFile dir = do
   [cabal_file] <- filter ((==".cabal") . takeExtensions) <$> listDirectory dir
@@ -90,14 +98,18 @@ getGHCVersion :: FilePath -> IO String
 getGHCVersion ghcPath =
     dropWhileEnd isSpace <$> readProcess ghcPath ["--numeric-version"] ""
 
-parseComp "%library" = Lib
-parseComp ('%':'e':'x':'e':':':comp) = (OtherComp 'x' comp)
-parseComp ('%':'t':'e':'s':'t':':':comp) = (OtherComp 't' comp)
-parseComp ('%':'f':'l':'i':'b':':':comp) = (OtherComp 'f' comp)
--- parseComp ('%':'c':'o':'m':'p':':':comp) = (OtherComp 'f' comp)
+parseComp ('%':'l':'i':'b':'r':'a':'r':'y':[])      = CompVar "" Lib
+parseComp ('%':'l':'i':'b':'r':'a':'r':'y':'%':var) = CompVar var Lib
+parseComp ('%':'e':'x':'e':xs)     = parseCompVar xs (OtherComp 'x')
+parseComp ('%':'t':'e':'s':'t':xs) = parseCompVar xs (OtherComp 't')
+parseComp ('%':'f':'l':'i':'b':xs) = parseCompVar xs (OtherComp 'f')
 
-compName Lib = "library"
-compName (OtherComp _ comp) = comp
+parseCompVar ('%':xs) f = CompVar var $ f comp
+    where (var, ':':comp) = span (/=':') xs
+parseCompVar (':':comp) f = CompVar "" $ f comp
+
+compName (CompVar _ Lib) = "library"
+compName (CompVar _ (OtherComp _ comp)) = comp
 
 main :: IO ()
 main = do
@@ -114,7 +126,11 @@ exec = do
 
   exes <- case cmd of
     '%':_ -> (:[]) <$> findExePath builddir cabal_file compBuildDir' (parseComp cmd)
-    _     -> mapM (findExePath builddir cabal_file compBuildDir' . flip OtherComp cmd) ['x', 't']
+    _     -> sequence [ findExePath builddir cabal_file compBuildDir' $
+                          CompVar var $ OtherComp ty cmd
+                      | ty  <- ['x', 't']
+                      , var <- ["", "opt", "noopt"]
+                      ]
 
   fexes <- mapM exists exes
   case catMaybes fexes of
@@ -135,8 +151,6 @@ exec = do
                 dir = compBuildDir' distdir pkg_name pkg_ver comp
                 exe = dir </> compName comp
             return $ exe
-
-distdir_path builddir = builddir </> "hat-vanilla-project" </> "dist-newstyle"
 
 haddock = do
   builddir:comp:args <- getArgs
@@ -187,41 +201,62 @@ applyGhcInfo builddir g = do
 compBuildDir, compDistDir
     :: (String, String, String) -> Version -> FilePath -> PkgName -> Version -> Comp -> FilePath
 
-compBuildDir sys ghc_ver builddir pkg_name pkg_ver Lib =
-    libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
-compBuildDir sys ghc_ver builddir pkg_name pkg_ver (OtherComp ty comp) =
-    normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver comp ty
+compBuildDir sys ghc_ver builddir pkg_name pkg_ver (CompVar var Lib) =
+    libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver var
+compBuildDir sys ghc_ver builddir pkg_name pkg_ver (CompVar var (OtherComp ty comp)) =
+    normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver var comp ty
 
-compDistDir sys ghc_ver builddir pkg_name pkg_ver Lib =
-    libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
-compDistDir sys ghc_ver builddir pkg_name pkg_ver (OtherComp ty comp) =
-    normCompDistDir sys ghc_ver builddir pkg_name pkg_ver comp ty
+compDistDir sys ghc_ver distdir pkg_name pkg_ver (CompVar _ Lib) =
+    packageDistdir sys ghc_ver distdir pkg_name pkg_ver
+compDistDir sys ghc_ver distdir pkg_name pkg_ver (CompVar var (OtherComp ty comp)) =
+    normCompDistDir sys ghc_ver distdir pkg_name pkg_ver var comp ty
 
 
-normCompBuildDir, normCompDistDir :: (String, String, String)
-             -> Version
-             -> FilePath
-             -> PkgName
-             -> Version
-             -> CompName
-             -> CompTy
-             -> FilePath
-normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver comp_name ty =
-  libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
-    </> [ty]
-    </> comp_name
+normCompBuildDir, normCompDistDir
+    :: (String, String, String)
+    -> Version
+    -> FilePath
+    -> PkgName
+    -> Version
+    -> Variant
+    -> CompName
+    -> CompTy
+    -> FilePath
+
+-- | Directory containing build outputs, for example @lib<comp>.so@ for foreign libs.
+--
+-- >>> normCompBuildDir ("x86_64", "unknown", "linux") "8.4.3" "dist-newstyle/" "insieme-hat" "0.2" "opt" "insieme-hat" 'f'
+-- "dist-newstyle/build/x86_64-linux/ghc-8.4.3/insieme-hat-0.2/f/insieme-hat/opt/build/insieme-hat"
+normCompBuildDir sys ghc_ver distdir pkg_name pkg_ver var comp_name ty =
+  normCompDistDir sys ghc_ver distdir pkg_name pkg_ver var comp_name ty
     </> "build"
     </> comp_name
 
-normCompDistDir sys ghc_ver builddir pkg_name pkg_ver comp_name ty =
-  libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver
+-- |
+-- >>> normCompDistDir ("x86_64", "unknown", "linux") "8.4.3" "dist-newstyle/" "insieme-hat" "0.2" "opt" "insieme-hat" 'f'
+-- "dist-newstyle/build/x86_64-linux/ghc-8.4.3/insieme-hat-0.2/f/insieme-hat/opt"
+normCompDistDir sys ghc_ver distdir pkg_name pkg_ver var comp_name ty =
+  packageDistdir sys ghc_ver distdir pkg_name pkg_ver
     </> [ty]
     </> comp_name
+    </> var
 
+-- |
+-- >>> libCompBuildDir ("x86_64", "unknown", "linux") "8.4.3" "dist-newstyle/" "insieme-hat" "0.2" "opt"
+-- "dist-newstyle/build/x86_64-linux/ghc-8.4.3/insieme-hat-0.2/opt"
 libCompBuildDir
+    :: (String, String, String) -> Version -> FilePath -> PkgName -> Version -> Variant -> FilePath
+libCompBuildDir sys ghc_ver distdir pkg_name pkg_ver var =
+  packageDistdir sys ghc_ver distdir pkg_name pkg_ver
+    </> var
+
+-- |
+-- >>> packageDistdir ("x86_64", "unknown", "linux") "8.4.3" "dist-newstyle/" "insieme-hat" "0.2"
+-- "dist-newstyle/build/x86_64-linux/ghc-8.4.3/insieme-hat-0.2"
+packageDistdir
     :: (String, String, String) -> Version -> FilePath -> PkgName -> Version -> FilePath
-libCompBuildDir (arch, _, os) ghc_ver builddir pkg_name pkg_ver =
-  builddir
+packageDistdir (arch, _, os) ghc_ver distdir pkg_name pkg_ver =
+  distdir
     </> "build"
     </> (arch ++ "-" ++ os)
     </> ("ghc-" ++ ghc_ver)
@@ -231,4 +266,6 @@ type Version = String
 type CompName = String
 type CompTy = Char
 type PkgName = String
-data Comp = Lib | OtherComp { cType :: CompTy, cName :: CompName }
+data Comp = CompVar Variant Comp'
+data Comp' = Lib | OtherComp { cType :: CompTy, cName :: CompName }
+type Variant = String -- "opt" | "noopt" | ""

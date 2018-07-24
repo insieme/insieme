@@ -11,19 +11,6 @@ get_target_property(INSIEME_CORE_SOURCE_DIR core SOURCE_DIR)
 
 list(APPEND HAT_PACKAGE_PATHS_LIST "${CMAKE_CURRENT_SOURCE_DIR}")
 
-# Prepare command list for creating cabal superproject dir
-unset(HAT_PACKAGES_SYMLINK_COMMANDS)
-unset(HAT_PACKAGE_PATHS_REL_LIST)
-foreach(pkg ${HAT_PACKAGE_PATHS_LIST})
-	string(REGEX REPLACE "[/\\]$" "" pkg_trailing "${pkg}")
-	get_filename_component(pkg_dirname "${pkg_trailing}" NAME)
-	list(APPEND HAT_PACKAGES_SYMLINK_COMMANDS
-		COMMAND ${CMAKE_COMMAND} -E create_symlink "${pkg}" "${CMAKE_BINARY_DIR}/hat-vanilla-project/${pkg_dirname}"
-		COMMAND ${CMAKE_COMMAND} -E create_symlink "${pkg}" "${CMAKE_BINARY_DIR}/hat-profiling-project/${pkg_dirname}")
-	list(APPEND HAT_PACKAGE_PATHS_REL_LIST "./${pkg_dirname}")
-endforeach()
-
-
 # Allows to specify a different compiler to use for compiling and linking haskell.
 # Normally you wouldn't want to do this, but in case you are using a wrapper like distcc (or maybe also ccache), you might
 # need to set this variable to the actual compiler you are using, since e.g. distcc doesn't support the @file argument syntax.
@@ -37,9 +24,6 @@ message(STATUS "Using ${HASKELL_C_COMPILER} for compiling Haskell")
 set(HAT_COMPILER_PATH "${THIRD_PARTY_DIR}/ghc/bin/ghc")
 string(REPLACE ";" " " HAT_PACKAGE_PATHS "${HAT_PACKAGE_PATHS_LIST}")
 configure_file(cabal.project.in cabal.project)
-
-string(REPLACE ";" " " HAT_PACKAGE_PATHS "${HAT_PACKAGE_PATHS_REL_LIST}")
-configure_file(cabal.project.in ${CMAKE_BINARY_DIR}/hat-vanilla-project/cabal.project)
 configure_file(cabal.project.in ${CMAKE_BINARY_DIR}/hat-profiling-project/cabal.project)
 configure_file(cabal.project.local.in ${CMAKE_BINARY_DIR}/hat-profiling-project/cabal.project.local)
 
@@ -48,25 +32,27 @@ configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh @ONLY)
 # mostly for get_target_property in allscale-hat
 add_custom_target(insieme_hat DEPENDS libinsieme-hat.so)
 
+if(IS_DIRECTORY "${CMAKE_BINARY_DIR}/hat-vanilla-project"
+    AND NOT IS_SYMLINK "${CMAKE_BINARY_DIR}/hat-vanilla-project")
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E rename "${CMAKE_BINARY_DIR}/hat-vanilla-project" "${CMAKE_BINARY_DIR}/_hat-vanilla-project_old")
+endif()
+
 add_custom_command(
         OUTPUT libinsieme-hat.so
 
 	# Fix rebuilding of .chs files
 	COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_SOURCE_DIR}/src/Insieme/Inspire/IR/NodeType.chs"
 
+        # needed by copyLib
+        COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_BINARY_DIR}/hat-vanilla-project"
+
 	# install dependencies and build package
 	COMMAND ${cabal} update
-	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 flib:insieme-hat
-
-	# Create symlinks for hat cabal superproject dir
-	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-vanilla-project"
-	COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle" "${CMAKE_BINARY_DIR}/hat-vanilla-project/dist-newstyle"
-
-	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-profiling-project"
+	COMMAND ${cabal} new-build --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project flib:insieme-hat
 
 	# copy library to binary dir
-	COMMAND ${runhaskell} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/copyLib.hs ${cabal_file} "%flib:insieme-hat" ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${runhaskell} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/copyLib.hs ${cabal_file} "%flib%opt:insieme-hat" ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 
         DEPENDS ${INSIEME_HAT_SRCS}
         DEPENDS ${INSIEME_CORE_SOURCE_DIR}/include/insieme/core/ir_nodes.def
@@ -75,8 +61,6 @@ add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 
 	COMMENT "Building Insieme HAT"
-
-	${HAT_PACKAGES_SYMLINK_COMMANDS}
 )
 
 if(BUILD_TESTS)
@@ -89,7 +73,7 @@ if(BUILD_TESTS)
 
 	add_test(
 		NAME insieme_hat_run_tests
-		COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_BINARY_DIR} %test:test
+		COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_BINARY_DIR} %test%opt:test
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
 
@@ -104,7 +88,7 @@ if(BUILD_DOCS)
 	add_custom_command(
 		TARGET insieme_hat
 		POST_BUILD
-		COMMAND ${haskell_env} ./scripts/hat-haddock ${CMAKE_BINARY_DIR} "%library"
+		COMMAND ${haskell_env} ./scripts/hat-haddock ${CMAKE_BINARY_DIR} "%library%opt"
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
 endif()
