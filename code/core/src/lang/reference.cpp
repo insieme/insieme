@@ -464,6 +464,17 @@ namespace lang {
 		return builder.callExpr(type, refExt.getRefDecl(), builder.getTypeLiteral(type));
 	}
 
+	ExpressionPtr buildRefMove(const ExpressionPtr& expr) {
+		assert_pred1(isReference, expr) << "Trying to build a decl ref which isn't a reference.";
+		IRBuilder builder(expr->getNodeManager());
+		auto& refExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		if(isPlainReference(expr)) return builder.callExpr(refExt.getRefMovePlain(), expr);
+		else if(isCppReference(expr)) return builder.callExpr(refExt.getRefMoveReference(), expr);
+		else if(isCppRValueReference(expr)) return builder.callExpr(refExt.getRefMoveRValueReference(), expr);
+		assert_fail() << "unsupported reference type " << expr->getType() << " in refMove cast";
+		return {};
+	}
+
 	bool isRefMathOp(const NodePtr& node) {
 		if(auto call = node.isa<core::CallExprPtr>()) {
 			return isRefMathOp(call->getFunctionExpr());

@@ -529,6 +529,8 @@ namespace lang {
 	ExpressionPtr buildRefNull(const TypePtr& type);
 	ExpressionPtr buildRefDecl(const TypePtr& type);
 
+	ExpressionPtr buildRefMove(const ExpressionPtr& expr);
+
 	/// Returns true is node is either GenPreInc, GenPostInc, GenPreDec or GenPostDec, or a call to any of them
 	bool isRefMathOp(const NodePtr& node);
 
