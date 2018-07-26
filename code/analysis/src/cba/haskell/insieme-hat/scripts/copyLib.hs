@@ -42,6 +42,7 @@ import Data.Char
 import Data.List
 import Data.Maybe
 import Data.Function
+import System.IO
 import System.Exit
 import System.Directory
 import System.Environment
@@ -56,6 +57,19 @@ import System.Posix.Directory
 -- because we want to be able to use the pinned compiler in "third_party/ghc"
 distdir_path builddir = builddir </> "hat-vanilla-project" </> "dist-newstyle"
 
+rawSystem' :: FilePath -> [String] -> IO ExitCode
+rawSystem' cmd args = do
+    v <- fromMaybe False . fmap (not . null) <$> lookupEnv "VERBOSE"
+    when v $
+        hPutStrLn stderr $ intercalate " " $ map formatProcessArg $ cmd : args
+    rawSystem cmd args
+  where
+    formatProcessArg :: String -> String
+    formatProcessArg xs
+        | any (\c -> isSpace c || elem c ";&{}[]#!") xs
+            = "'"++ xs ++"'"
+        | otherwise
+            = xs
 
 getCabalFile :: FilePath -> IO FilePath
 getCabalFile dir = do
@@ -135,7 +149,7 @@ exec = do
   fexes <- mapM exists exes
   case catMaybes fexes of
     []  -> error $ "Couldn't find any of:\n" ++ intercalate "\n" (map ("    "++) exes) ++ "\n"
-    [exe] -> exitWith =<< rawSystem exe args
+    [exe] -> exitWith =<< rawSystem' exe args
     _   -> error $ "Ambigous command '" ++ cmd ++ "' please specify component: maybe %exe:" ++ cmd ++ " or %test:" ++ cmd
                 ++ "\n"
 
@@ -163,8 +177,8 @@ haddock = do
   let distdir = distdir_path builddir
       dir = compDistDir' distdir pkg_name pkg_ver (parseComp comp)
 
-  void $ rawSystem "cabal" $ ["act-as-setup", "--", "haddock", "--builddir="++dir]++args
-  void $ rawSystem "cp" ["-av", dir </> "doc" , builddir]
+  ExitSuccess <- rawSystem' "cabal" $ ["act-as-setup", "--", "haddock", "--builddir="++dir]++args
+  ExitSuccess <- rawSystem' "cp" ["-av", dir </> "doc" , builddir]
   putStrLn dir
 
 copyLib = do
