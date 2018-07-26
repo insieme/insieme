@@ -215,13 +215,13 @@ applyGhcInfo builddir g = do
 compBuildDir, compDistDir
     :: (String, String, String) -> Version -> FilePath -> PkgName -> Version -> Comp -> FilePath
 
-compBuildDir sys ghc_ver builddir pkg_name pkg_ver (CompVar var Lib) =
-    libCompBuildDir sys ghc_ver builddir pkg_name pkg_ver var
-compBuildDir sys ghc_ver builddir pkg_name pkg_ver (CompVar var (OtherComp ty comp)) =
-    normCompBuildDir sys ghc_ver builddir pkg_name pkg_ver var comp ty
+compBuildDir sys ghc_ver distdir pkg_name pkg_ver (CompVar var Lib) =
+    libCompBuildDir sys ghc_ver distdir pkg_name pkg_ver var
+compBuildDir sys ghc_ver distdir pkg_name pkg_ver (CompVar var (OtherComp ty comp)) =
+    normCompBuildDir sys ghc_ver distdir pkg_name pkg_ver var comp ty
 
-compDistDir sys ghc_ver distdir pkg_name pkg_ver (CompVar _ Lib) =
-    packageDistdir sys ghc_ver distdir pkg_name pkg_ver
+compDistDir sys ghc_ver distdir pkg_name pkg_ver (CompVar var Lib) =
+    libCompBuildDir sys ghc_ver distdir pkg_name pkg_ver var
 compDistDir sys ghc_ver distdir pkg_name pkg_ver (CompVar var (OtherComp ty comp)) =
     normCompDistDir sys ghc_ver distdir pkg_name pkg_ver var comp ty
 
