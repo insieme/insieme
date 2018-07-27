@@ -88,7 +88,7 @@ if(BUILD_DOCS)
 	add_custom_command(
 		TARGET insieme_hat
 		POST_BUILD
-		COMMAND ${haskell_env} ./scripts/hat-haddock ${CMAKE_BINARY_DIR} "%library%opt"
+		COMMAND ${haskell_env} ./scripts/hat-haddock ${cabal_file} "%library%opt" ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
 endif()

@@ -55,7 +55,8 @@ import System.Posix.Directory
 --
 -- we switched to using the $BUILDDIR as the root of things instead of distdir
 -- because we want to be able to use the pinned compiler in "third_party/ghc"
-distdir_path builddir = builddir </> "hat-vanilla-project" </> "dist-newstyle"
+distdir_path builddir = project_builddir_path builddir </> "dist-newstyle"
+project_builddir_path builddir = builddir </> "hat-vanilla-project"
 
 rawSystem' :: FilePath -> [String] -> IO ExitCode
 rawSystem' cmd args = do
@@ -167,8 +168,7 @@ exec = do
             return $ exe
 
 haddock = do
-  builddir:comp:args <- getArgs
-  cabal_file <- getCabalFile =<< getCurrentDirectory
+  cabal_file:comp:builddir:destdir:args <- getArgs
 
   compDistDir' <- applyGhcInfo builddir compDistDir
   pkg_name <- getPackageName    cabal_file
@@ -178,7 +178,7 @@ haddock = do
       dir = compDistDir' distdir pkg_name pkg_ver (parseComp comp)
 
   ExitSuccess <- rawSystem' "cabal" $ ["act-as-setup", "--", "haddock", "--builddir="++dir]++args
-  ExitSuccess <- rawSystem' "cp" ["-av", dir </> "doc" , builddir]
+  ExitSuccess <- rawSystem' "cp" ["-av", dir </> "doc" , destdir]
   putStrLn dir
 
 copyLib = do
