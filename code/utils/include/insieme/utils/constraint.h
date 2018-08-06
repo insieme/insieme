@@ -49,6 +49,7 @@
 #endif
 
 #include <boost/operators.hpp>
+#include <boost/mpl/and.hpp>
 #include <boost/mpl/or.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/utility/enable_if.hpp>
