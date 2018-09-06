@@ -37,6 +37,7 @@
 
 #include "insieme/core/ir_builder.h"
 
+#include <cinttypes>
 #include <tuple>
 #include <limits>
 #include <set>
