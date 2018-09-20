@@ -406,13 +406,15 @@ namespace backend {
 				// get type info
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, type);
 
+
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();
 				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Global Variable Declaration ----------"));
 				declaration->getCode().push_back(cManager->create<c_ast::GlobalVarDecl>(info.lValueType, ptr->getStringValue(), annotations::c::isExtern(ptr)));
 
-				// add dependency to type declaration
-				declaration->addDependency(info.definition);
+				// add dependency to element type definition
+				const TypeInfo& elementInfo = context.getConverter().getTypeManager().getTypeInfo(context, core::analysis::getReferencedType(type));
+				declaration->addDependency(elementInfo.definition);
 
 				fragment = declaration;
 			}
