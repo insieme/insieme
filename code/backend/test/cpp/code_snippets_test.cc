@@ -950,13 +950,16 @@ namespace backend {
 			int<4> main() {
 				Trivial::(lit("x" : ref<Trivial,f,f,plain>));
 				A::(lit("a" : ref<A,f,f,plain>), 5);
+				A::(ref_cast(lit("ca" : ref<A,t,f,plain>), type_lit(f), type_lit(f), type_lit(plain)), 6);
 				lit("x" : ref<Trivial,f,f,plain>);
 				lit("a" : ref<A,f,f,plain>);
+				lit("ca" : ref<A,t,f,plain>);
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(notContainsSubString, code, "new"); // no heap mem allocation in this program
 			EXPECT_PRED2(containsSubString, code, "A a(5);");
+			EXPECT_PRED2(containsSubString, code, "const A ca(6);");
 		})
 	}
 

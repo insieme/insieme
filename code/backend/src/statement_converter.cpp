@@ -262,9 +262,12 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, ConversionContext& context) {
 		// special handling for global variable initialization
-		if(core::analysis::isConstructorCall(ptr) && core::analysis::getArgument(ptr, 0).isa<core::LiteralPtr>()) {
-			convertGlobalInit(context, core::analysis::getArgument(ptr, 0).as<core::LiteralPtr>(), ptr);
-			return {};
+		if(core::analysis::isConstructorCall(ptr)) {
+			// check whether the this argument is a global (i.e. a literal). Also remove any ref-casts which might be there for const objects
+			if(const auto& lit = core::lang::removeSurroundingRefCasts(core::analysis::getArgument(ptr, 0)).isa<core::LiteralPtr>()) {
+				convertGlobalInit(context, lit, ptr);
+				return {};
+			}
 		}
 		// everything else is handled by the function manager
 		auto cCall = converter.getFunctionManager().getCall(context, ptr);
