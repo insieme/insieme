@@ -69,6 +69,12 @@ namespace {
 
 		const EffortType EFFORT_REPORTING_LIMIT = 30;
 
+		const EffortType EFFORT_WHILE_LOOP_BRANCHING = 2;
+		const EffortType EFFORT_FOR_LOOP_INITILIZATION = 1;
+		const EffortType EFFORT_FOR_LOOP_BRANCHING = 2;
+		const EffortType EFFORT_FOR_LOOP_CONDITION = 1;
+		const EffortType EFFORT_FOR_LOOP_INCREMENT = 1;
+
 	  public:
 		ProgressMapper(core::NodeManager& manager) : mgr(manager), builder(manager),
 				reportingLiteral(builder.literal("report_progress", builder.functionType(builder.getLangBasic().getUInt16(), builder.getLangBasic().getUnit()))) {
@@ -118,18 +124,29 @@ namespace {
 
 			for(auto it = stmts.begin(); it < stmts.end(); ++it) {
 				auto stmt = *it;
-				const EffortType stmtEffort = analysis::features::estimateEffort(stmt);
 
-				// while loops get a special handling
+				// certain nodes get a special handling
 				if(const auto& whileStmt = stmt.isa<core::WhileStmtPtr>()) {
 					// report the effort until here before the loop starts
 					insertEffortReportingCall(it);
 					// store a start effort value for the body
-					childEffortStart[whileStmt->getBody()] = analysis::features::estimateEffort(whileStmt->getCondition()) + 2;
+					childEffortStart[whileStmt->getBody()] = analysis::features::estimateEffort(whileStmt->getCondition()) + EFFORT_WHILE_LOOP_BRANCHING;
+					// now recursively visit all children
+					*it = stmt->substitute(mgr, *this);
+					continue;
+
+				} else if(const auto& forStmt = stmt.isa<core::ForStmtPtr>()) {
+					// report the effort until here before the loop starts + the initialization
+					effort += EFFORT_FOR_LOOP_INITILIZATION;
+					insertEffortReportingCall(it);
+					// store a start effort value for the body
+					childEffortStart[forStmt->getBody()] = EFFORT_FOR_LOOP_BRANCHING + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_INCREMENT;
 					// now recursively visit all children
 					*it = stmt->substitute(mgr, *this);
 					continue;
 				}
+
+				const EffortType stmtEffort = analysis::features::estimateEffort(stmt);
 
 				// if the effort for the sub statement is high enough, we recursively handle this sub statement but report the current effort beforehand
 				if(stmtEffort > EFFORT_REPORTING_LIMIT) {
