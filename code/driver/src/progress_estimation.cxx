@@ -101,7 +101,6 @@ namespace {
 			EffortType effort = 0;
 			if(childEffortStart.find(node) != childEffortStart.end()) {
 				effort = childEffortStart[node];
-				std::cout << "Setting start offset to: " << effort << std::endl;
 			}
 
 			auto insertEffortReportingCall = [&](core::StatementList::iterator& it) {
@@ -194,14 +193,11 @@ int main(int argc, char** argv) {
 	std::cout.imbue(std::locale(""));
 
 	dumpReadable(program);
-	const auto& body = program->getEntryPoints()[0].as<core::LambdaExprPtr>()->getBody();
-	std::cout << "Total progress: " << analysis::features::estimateEffort(body) << std::endl;
 
 	auto res = ProgressMapper(program.getNodeManager()).map(program);
 
 	std::cout << "\n\n###########\n\n\n" << std::endl;
 	dumpReadable(res);
-	std::cout << "Total progress: " << analysis::features::estimateEffort(res) << std::endl;
 
 	return 0;
 }
