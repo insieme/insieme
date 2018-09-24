@@ -126,7 +126,7 @@ namespace {
 					insertEffortReportingCall(it);
 					// store a start effort value for the body
 					childEffortStart[whileStmt->getBody()] = analysis::features::estimateEffort(whileStmt->getCondition()) + 2;
-					// now recursively visit the body
+					// now recursively visit all children
 					*it = stmt->substitute(mgr, *this);
 					continue;
 				}
@@ -134,7 +134,7 @@ namespace {
 				// if the effort for the sub statement is high enough, we recursively handle this sub statement but report the current effort beforehand
 				if(stmtEffort > EFFORT_REPORTING_LIMIT) {
 					insertEffortReportingCall(it);
-					*it = stmt->substitute(mgr, *this);
+					*it = resolveElement(stmt).as<core::StatementPtr>();
 					continue;
 				}
 
