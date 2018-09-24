@@ -149,7 +149,7 @@ namespace {
 			if(!stmts.empty()) {
 				const auto& lastStmt = stmts.back();
 				if(!lastStmt.isa<core::CallExprPtr>() || lastStmt.as<core::CallExprPtr>()->getFunctionExpr() != reportingLiteral) {
-					if(!isExitPoint(lastStmt)) {
+					if(!isExitPoint(lastStmt) && effort != 0) {
 						stmts.push_back(buildReportingCall(effort));
 					}
 				}
