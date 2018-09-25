@@ -65,8 +65,6 @@ namespace {
 		core::IRBuilder builder;
 		const core::LiteralPtr reportingLiteral;
 
-		std::map<core::NodePtr, EffortType> childEffortStart;
-
 		const EffortType EFFORT_REPORTING_LIMIT = 30;
 
 		const EffortType EFFORT_WHILE_LOOP_BRANCHING = 2;
@@ -86,7 +84,7 @@ namespace {
 			return builder.callExpr(reportingLiteral, builder.integerLit(effort));
 		}
 
-		virtual const core::NodePtr resolveElement(const core::NodePtr& node) override {
+		const core::NodePtr resolveElementInternal(const core::NodePtr& node, const EffortType startOffset) {
 			const auto& nodeType = node.getNodeType();
 			// prune calls to builtins
 			if (nodeType == core::NT_CallExpr) {
@@ -104,10 +102,7 @@ namespace {
 			const core::CompoundStmtPtr& compound = node.as<core::CompoundStmtPtr>();
 			core::StatementList stmts(compound.getStatements());
 
-			EffortType effort = 0;
-			if(childEffortStart.find(node) != childEffortStart.end()) {
-				effort = childEffortStart[node];
-			}
+			EffortType effort = startOffset;
 
 			auto insertEffortReportingCall = [&](core::StatementList::iterator& it) {
 				if(effort != 0) {
@@ -129,24 +124,27 @@ namespace {
 				if(const auto& whileStmt = stmt.isa<core::WhileStmtPtr>()) {
 					// report the effort until here before the loop starts
 					insertEffortReportingCall(it);
-					// store a start effort value for the body
-					childEffortStart[whileStmt->getBody()] = analysis::features::estimateEffort(whileStmt->getCondition()) + EFFORT_WHILE_LOOP_BRANCHING;
-					// now recursively visit all children
-					*it = stmt->substitute(mgr, *this);
+					// get the loop overhead
+					const auto loopOverhead = analysis::features::estimateEffort(whileStmt->getCondition()) + EFFORT_WHILE_LOOP_BRANCHING;
+					// now build a new loop and replace the old one
+					const auto newCondition = whileStmt->getCondition().substitute(mgr, *this);
+					const auto newBody = resolveElementInternal(whileStmt->getBody(), loopOverhead).as<core::StatementPtr>();
+					*it = builder.whileStmt(newCondition, newBody);
 					continue;
 
 				} else if(const auto& forStmt = stmt.isa<core::ForStmtPtr>()) {
 					// report the effort until here before the loop starts + the initialization
 					effort += EFFORT_FOR_LOOP_INITILIZATION;
 					insertEffortReportingCall(it);
-					// store a start effort value for the body
-					childEffortStart[forStmt->getBody()] = EFFORT_FOR_LOOP_BRANCHING + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_INCREMENT;
-					// now recursively visit all children
-					*it = stmt->substitute(mgr, *this);
+					// get the loop overhead
+					const auto loopOverhead = EFFORT_FOR_LOOP_BRANCHING + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_INCREMENT;
+					// now build a new loop and replace the old one
+					const auto newBody = resolveElementInternal(forStmt->getBody(), loopOverhead).as<core::StatementPtr>();
+					*it = builder.forStmt(forStmt->getDeclaration(), forStmt->getEnd(), forStmt->getStep(), newBody);
 					continue;
 				}
 
-				const EffortType stmtEffort = analysis::features::estimateEffort(stmt);
+				const auto stmtEffort = analysis::features::estimateEffort(stmt);
 
 				// if the effort for the sub statement is high enough, we recursively handle this sub statement but report the current effort beforehand
 				if(stmtEffort > EFFORT_REPORTING_LIMIT) {
@@ -177,6 +175,10 @@ namespace {
 			}
 
 			return builder.compoundStmt(stmts);
+		}
+
+		virtual const core::NodePtr resolveElement(const core::NodePtr& node) override {
+			return resolveElementInternal(node, 0);
 		}
 	};
 }
