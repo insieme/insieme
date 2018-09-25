@@ -39,10 +39,26 @@
 
 #include "insieme/analysis/features/effort_estimation.h"
 #include "insieme/core/ir_node.h"
+#include "insieme/core/lang/extension.h"
 
 
 namespace insieme {
 namespace transform {
+
+	class ProgressEstomationExtension : public core::lang::Extension {
+		// Allow the node manager to create instances of this class.
+		friend class core::NodeManager;
+
+		// Creates a new instance based on the given node manager.
+		ProgressEstomationExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+	  public:
+		LANG_EXT_LITERAL(ProgressReportingLiteral, "report_progress", "(uint<16>) -> unit");
+	};
+
+	core::ExpressionPtr buildProgressReportingCall(core::NodeManager& manager, const analysis::features::EffortEstimationType progress);
+
+	analysis::features::EffortEstimationType getReportedProgress(const core::NodePtr& node);
 
 	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const analysis::features::EffortEstimationType progressReportingLimit);
 

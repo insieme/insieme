@@ -37,6 +37,8 @@
 
 #include "insieme/transform/progress_estimation.h"
 
+#include <string>
+
 #include "insieme/analysis/features/effort_estimation.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -52,11 +54,17 @@ namespace transform {
 	using EffortType = analysis::features::EffortEstimationType;
 
 	namespace {
+		core::ExpressionPtr buildProgressReportingCallInternal(const core::IRBuilder& builder,
+		                                                       const core::LiteralPtr& reportingLiteral,
+		                                                       const EffortType progress) {
+			return builder.callExpr(reportingLiteral, builder.literal(builder.getLangBasic().getUInt16(), toString(progress)));
+		}
+
 		class ProgressMapper : public core::transform::CachedNodeMapping {
 
 			core::NodeManager& mgr;
 			core::IRBuilder builder;
-			const core::LiteralPtr reportingLiteral;
+			const ProgressEstomationExtension& progressExtension;
 
 			const EffortType progressReportingLimit;
 
@@ -69,14 +77,12 @@ namespace transform {
 
 		  public:
 			ProgressMapper(core::NodeManager& manager, const EffortType progressReportingLimit) : mgr(manager), builder(manager),
-					reportingLiteral(builder.literal("report_progress", builder.functionType(builder.getLangBasic().getUInt16(), builder.getLangBasic().getUnit()))),
-					progressReportingLimit(progressReportingLimit) {
-				core::lang::markAsBuiltIn(reportingLiteral);
-			}
+					progressExtension(manager.getLangExtension<ProgressEstomationExtension>()),
+					progressReportingLimit(progressReportingLimit) { }
 
 		  private:
-			core::ExpressionPtr buildProgressReportingCall(EffortType progress) const {
-				return builder.callExpr(reportingLiteral, builder.integerLit(progress));
+			core::ExpressionPtr buildProgressReportingCall(const EffortType progress) const {
+				return buildProgressReportingCallInternal(builder, progressExtension.getProgressReportingLiteral(), progress);
 			}
 
 			const core::NodePtr resolveElementInternal(const core::NodePtr& node, const EffortType startProgressOffset = 0) {
@@ -169,7 +175,7 @@ namespace transform {
 				// insert a reporting call in the end if there isn't already one and we don't have an exit point there
 				if(!stmts.empty()) {
 					const auto& lastStmt = stmts.back();
-					if(!lastStmt.isa<core::CallExprPtr>() || lastStmt.as<core::CallExprPtr>()->getFunctionExpr() != reportingLiteral) {
+					if(!progressExtension.isCallOfProgressReportingLiteral(lastStmt)) {
 						if(!isExitPoint(lastStmt) && progress != 0) {
 							stmts.push_back(buildProgressReportingCall(progress));
 						}
@@ -187,6 +193,19 @@ namespace transform {
 				return resolveElementInternal(node);
 			}
 		};
+	}
+
+
+	core::ExpressionPtr buildProgressReportingCall(core::NodeManager& manager, const EffortType progress) {
+		const auto& ext = manager.getLangExtension<ProgressEstomationExtension>();
+		return buildProgressReportingCallInternal(core::IRBuilder(manager), ext.getProgressReportingLiteral(), progress);
+	}
+
+	analysis::features::EffortEstimationType getReportedProgress(const core::NodePtr& node) {
+		const auto& ext = node.getNodeManager().getLangExtension<ProgressEstomationExtension>();
+		if(!ext.isCallOfProgressReportingLiteral(node)) return 0;
+		auto uintValue = core::analysis::getArgument(node, 0).as<core::LiteralPtr>();
+		return std::stoull(uintValue->getValue()->getValue());
 	}
 
 	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const EffortType progressReportingLimit) {
