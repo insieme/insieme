@@ -72,6 +72,7 @@ namespace {
 		const EffortType EFFORT_FOR_LOOP_BRANCHING = 2;
 		const EffortType EFFORT_FOR_LOOP_CONDITION = 1;
 		const EffortType EFFORT_FOR_LOOP_INCREMENT = 1;
+		const EffortType EFFORT_IF_BRANCHING = 1;
 
 	  public:
 		ProgressMapper(core::NodeManager& manager) : mgr(manager), builder(manager),
@@ -141,6 +142,17 @@ namespace {
 					// now build a new loop and replace the old one
 					const auto newBody = resolveElementInternal(forStmt->getBody(), loopOverhead).as<core::StatementPtr>();
 					*it = builder.forStmt(forStmt->getDeclaration(), forStmt->getEnd(), forStmt->getStep(), newBody);
+					continue;
+
+				} else if(const auto& ifStmt = stmt.isa<core::IfStmtPtr>()) {
+					// add the condition overhead to both branches
+					effort += EFFORT_IF_BRANCHING + analysis::features::estimateEffort(ifStmt->getCondition());
+					// now build a new if stmt and replace the old one
+					const auto newCondition = ifStmt->getCondition().substitute(mgr, *this);
+					const auto newThenBody = resolveElementInternal(ifStmt->getThenBody(), effort).as<core::StatementPtr>();
+					const auto newElseBody = resolveElementInternal(ifStmt->getElseBody(), effort).as<core::StatementPtr>();
+					*it = builder.ifStmt(newCondition, newThenBody, newElseBody);
+					effort = 0;
 					continue;
 				}
 
