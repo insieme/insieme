@@ -75,11 +75,11 @@ namespace transform {
 			}
 
 		  private:
-			core::ExpressionPtr buildReportingCall(EffortType effort) const {
-				return builder.callExpr(reportingLiteral, builder.integerLit(effort));
+			core::ExpressionPtr buildProgressReportingCall(EffortType progress) const {
+				return builder.callExpr(reportingLiteral, builder.integerLit(progress));
 			}
 
-			const core::NodePtr resolveElementInternal(const core::NodePtr& node, const EffortType startOffset) {
+			const core::NodePtr resolveElementInternal(const core::NodePtr& node, const EffortType startProgressOffset = 0) {
 				const auto& nodeType = node.getNodeType();
 				// prune calls to builtins
 				if (nodeType == core::NT_CallExpr) {
@@ -97,13 +97,13 @@ namespace transform {
 				const core::CompoundStmtPtr& compound = node.as<core::CompoundStmtPtr>();
 				core::StatementList stmts(compound.getStatements());
 
-				EffortType effort = startOffset;
+				EffortType progress = startProgressOffset;
 
-				auto insertEffortReportingCall = [&](core::StatementList::iterator& it) {
-					if(effort != 0) {
-						it = stmts.insert(it, buildReportingCall(effort));
+				auto insertProgressReportingCall = [&](core::StatementList::iterator& it) {
+					if(progress != 0) {
+						it = stmts.insert(it, buildProgressReportingCall(progress));
 						++it;
-						effort = 0;
+						progress = 0;
 					}
 				};
 
@@ -117,8 +117,8 @@ namespace transform {
 
 					// certain nodes get a special handling
 					if(const auto& whileStmt = stmt.isa<core::WhileStmtPtr>()) {
-						// report the effort until here before the loop starts
-						insertEffortReportingCall(it);
+						// report the progress until here before the loop starts
+						insertProgressReportingCall(it);
 						// get the loop overhead
 						const auto loopOverhead = analysis::features::estimateEffort(whileStmt->getCondition()) + EFFORT_WHILE_LOOP_BRANCHING;
 						// now build a new loop and replace the old one
@@ -128,9 +128,9 @@ namespace transform {
 						continue;
 
 					} else if(const auto& forStmt = stmt.isa<core::ForStmtPtr>()) {
-						// report the effort until here before the loop starts + the initialization
-						effort += EFFORT_FOR_LOOP_INITILIZATION;
-						insertEffortReportingCall(it);
+						// report the progress until here before the loop starts + the initialization
+						progress += EFFORT_FOR_LOOP_INITILIZATION;
+						insertProgressReportingCall(it);
 						// get the loop overhead
 						const auto loopOverhead = EFFORT_FOR_LOOP_BRANCHING + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_INCREMENT;
 						// now build a new loop and replace the old one
@@ -140,51 +140,51 @@ namespace transform {
 
 					} else if(const auto& ifStmt = stmt.isa<core::IfStmtPtr>()) {
 						// add the condition overhead to both branches
-						effort += EFFORT_IF_BRANCHING + analysis::features::estimateEffort(ifStmt->getCondition());
+						progress += EFFORT_IF_BRANCHING + analysis::features::estimateEffort(ifStmt->getCondition());
 						// now build a new if stmt and replace the old one
 						const auto newCondition = ifStmt->getCondition().substitute(mgr, *this);
-						const auto newThenBody = resolveElementInternal(ifStmt->getThenBody(), effort).as<core::StatementPtr>();
-						const auto newElseBody = resolveElementInternal(ifStmt->getElseBody(), effort).as<core::StatementPtr>();
+						const auto newThenBody = resolveElementInternal(ifStmt->getThenBody(), progress).as<core::StatementPtr>();
+						const auto newElseBody = resolveElementInternal(ifStmt->getElseBody(), progress).as<core::StatementPtr>();
 						*it = builder.ifStmt(newCondition, newThenBody, newElseBody);
-						effort = 0;
+						progress = 0;
 						continue;
 					}
 
-					const auto stmtEffort = analysis::features::estimateEffort(stmt);
+					const auto stmtProgress = analysis::features::estimateEffort(stmt);
 
-					// if the effort for the sub statement is high enough, we recursively handle this sub statement but report the current effort beforehand
-					if(stmtEffort > progressReportingLimit) {
-						insertEffortReportingCall(it);
+					// if the progress for the sub statement is high enough, we recursively handle this sub statement but report the current progress beforehand
+					if(stmtProgress > progressReportingLimit) {
+						insertProgressReportingCall(it);
 						*it = resolveElement(stmt).as<core::StatementPtr>();
 						continue;
 					}
 
-					// insert reporting call before each exit point or if the effort until now and the stmtEffort are more than our limit
-					if(isExitPoint(stmt) || effort + stmtEffort > progressReportingLimit) {
-						insertEffortReportingCall(it);
+					// insert reporting call before each exit point or if the progress until now and the stmtProgress are more than our limit
+					if(isExitPoint(stmt) || progress + stmtProgress > progressReportingLimit) {
+						insertProgressReportingCall(it);
 					}
-					effort += stmtEffort;
+					progress += stmtProgress;
 				}
 
 				// insert a reporting call in the end if there isn't already one and we don't have an exit point there
 				if(!stmts.empty()) {
 					const auto& lastStmt = stmts.back();
 					if(!lastStmt.isa<core::CallExprPtr>() || lastStmt.as<core::CallExprPtr>()->getFunctionExpr() != reportingLiteral) {
-						if(!isExitPoint(lastStmt) && effort != 0) {
-							stmts.push_back(buildReportingCall(effort));
+						if(!isExitPoint(lastStmt) && progress != 0) {
+							stmts.push_back(buildProgressReportingCall(progress));
 						}
 					}
 
-					// if we are processing an empty compound which has an effort (i.e. because it got some start effort from it's parent), report it
-				} else if(effort != 0) {
-					stmts.push_back(buildReportingCall(effort));
+					// if we are processing an empty compound which has a progress (i.e. because it got some start progress from it's parent), report it
+				} else if(progress != 0) {
+					stmts.push_back(buildProgressReportingCall(progress));
 				}
 
 				return builder.compoundStmt(stmts);
 			}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& node) override {
-				return resolveElementInternal(node, 0);
+				return resolveElementInternal(node);
 			}
 		};
 	}
