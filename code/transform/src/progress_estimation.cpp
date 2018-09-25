@@ -54,9 +54,9 @@ namespace transform {
 	using EffortType = analysis::features::EffortEstimationType;
 
 	namespace {
-		core::ExpressionPtr buildProgressReportingCallInternal(const core::IRBuilder& builder,
-		                                                       const core::LiteralPtr& reportingLiteral,
-		                                                       const EffortType progress) {
+		core::CallExprPtr buildProgressReportingCallInternal(const core::IRBuilder& builder,
+		                                                     const core::LiteralPtr& reportingLiteral,
+		                                                     const EffortType progress) {
 			return builder.callExpr(reportingLiteral, builder.literal(builder.getLangBasic().getUInt16(), toString(progress)));
 		}
 
@@ -81,7 +81,7 @@ namespace transform {
 					progressReportingLimit(progressReportingLimit) { }
 
 		  private:
-			core::ExpressionPtr buildProgressReportingCall(const EffortType progress) const {
+			core::CallExprPtr buildProgressReportingCall(const EffortType progress) const {
 				return buildProgressReportingCallInternal(builder, progressExtension.getProgressReportingLiteral(), progress);
 			}
 
@@ -196,7 +196,7 @@ namespace transform {
 	}
 
 
-	core::ExpressionPtr buildProgressReportingCall(core::NodeManager& manager, const EffortType progress) {
+	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const EffortType progress) {
 		const auto& ext = manager.getLangExtension<ProgressEstomationExtension>();
 		return buildProgressReportingCallInternal(core::IRBuilder(manager), ext.getProgressReportingLiteral(), progress);
 	}

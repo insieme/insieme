@@ -35,32 +35,60 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/features/effort_estimation.h"
+#include "insieme/transform/progress_estimation.h"
+
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/ir_node.h"
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/ir_builder.h"
 
 
 namespace insieme {
 namespace transform {
 
-	class ProgressEstomationExtension : public core::lang::Extension {
-		// Allow the node manager to create instances of this class.
-		friend class core::NodeManager;
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
 
-		// Creates a new instance based on the given node manager.
-		ProgressEstomationExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+	TEST(IrExtension, Basic) {
+		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
 
-	  public:
-		LANG_EXT_LITERAL(ProgressReportingLiteral, "report_progress", "(uint<16>) -> unit");
-	};
+		const auto& lit = ext.getProgressReportingLiteral();
+		ASSERT_TRUE(lit);
 
-	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const analysis::features::EffortEstimationType progress);
+		const auto& funType = lit->getType().isa<core::FunctionTypePtr>();
+		ASSERT_TRUE(funType);
 
-	analysis::features::EffortEstimationType getReportedProgress(const core::NodePtr& node);
+		const auto desiredType = builder.parseType("(uint<16>) -> unit");
+		EXPECT_EQ(desiredType, funType);
+	}
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const analysis::features::EffortEstimationType progressReportingLimit);
+	TEST(IrExtension, Builder) {
+		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
+
+		const auto call = buildProgressReportingCall(mgr, 0);
+		assert_correct_ir(call);
+
+		ASSERT_TRUE(ext.isCallOfProgressReportingLiteral(call));
+		const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
+		const auto desiredType = builder.parseType("(uint<16>) -> unit");
+		ASSERT_EQ(desiredType, funType);
+
+		const auto& arg = core::analysis::getArgument(call, 0);
+		EXPECT_EQ(builder.getLangBasic().getUInt16(), arg->getType());
+	}
+
+	TEST(IrExtension, Extractor) {
+		const auto call0 = buildProgressReportingCall(mgr, 0);
+		EXPECT_EQ(0, getReportedProgress(call0));
+
+		const auto call1 = buildProgressReportingCall(mgr, 42);
+		EXPECT_EQ(42, getReportedProgress(call1));
+
+		const auto call2 = buildProgressReportingCall(mgr, 9876543210ull);
+		EXPECT_EQ(9876543210ull, getReportedProgress(call2));
+	}
 
 } // end namespace transform
 } // end namespace insieme
