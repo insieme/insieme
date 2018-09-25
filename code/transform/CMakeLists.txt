@@ -1,6 +1,7 @@
 add_module_library(transform)
 
 target_link_libraries(transform core)
+target_link_libraries(transform analysis)
 target_link_libraries(transform utils)
 
 # Boost

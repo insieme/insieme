@@ -35,46 +35,15 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "insieme/driver/cmd/commandline_options.h"
-#include "insieme/driver/utils/object_file_utils.h"
+#pragma once
 
-#include "insieme/utils/version.h"
-
-#include "insieme/transform/progress_estimation.h"
+#include "insieme/core/ir_node.h"
 
 
-using namespace insieme;
+namespace insieme {
+namespace transform {
 
-int main(int argc, char** argv) {
-	std::cout << "Insieme Progress Estimation - Version: " << utils::getVersion() << "\n";
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node);
 
-	// Step 1: parse input parameters
-	auto options = driver::cmd::Options::parse(argc, argv);
-
-	// if options are invalid, exit non-zero
-	if(!options.valid) { return 1; }
-	// if e.g. help was specified, exit with zero
-	if(options.gracefulExit) { return 0; }
-
-	// Step 2: filter input files
-	core::NodeManager mgr;
-	if(!driver::utils::filterInputFiles(mgr, options.job)) {
-		return 1;
-	}
-
-	// Step 3: load input code
-
-	// convert src file to IR
-	auto program = options.job.execute(mgr);
-
-	// ----- progress estimation ------
-
-	dumpReadable(program);
-
-	auto res = insieme::transform::applyProgressEstimation(program);
-
-	std::cout << "\n\n###########\n\n\n" << std::endl;
-	dumpReadable(res);
-
-	return 0;
-}
+} // end namespace transform
+} // end namespace insieme
