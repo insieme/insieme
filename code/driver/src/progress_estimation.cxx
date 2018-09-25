@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
 
 	dumpReadable(program);
 
-	auto res = insieme::transform::applyProgressEstimation(program);
+	auto res = insieme::transform::applyProgressEstimation(program, 30);
 
 	std::cout << "\n\n###########\n\n\n" << std::endl;
 	dumpReadable(res);

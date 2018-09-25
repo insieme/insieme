@@ -49,16 +49,16 @@
 namespace insieme {
 namespace transform {
 
+	using EffortType = analysis::features::EffortEstimationType;
+
 	namespace {
 		class ProgressMapper : public core::transform::CachedNodeMapping {
-
-			using EffortType = analysis::features::EffortEstimationType;
 
 			core::NodeManager& mgr;
 			core::IRBuilder builder;
 			const core::LiteralPtr reportingLiteral;
 
-			const EffortType EFFORT_REPORTING_LIMIT = 30;
+			const EffortType progressReportingLimit;
 
 			const EffortType EFFORT_WHILE_LOOP_BRANCHING = 2;
 			const EffortType EFFORT_FOR_LOOP_INITILIZATION = 1;
@@ -68,8 +68,9 @@ namespace transform {
 			const EffortType EFFORT_IF_BRANCHING = 1;
 
 		  public:
-			ProgressMapper(core::NodeManager& manager) : mgr(manager), builder(manager),
-					reportingLiteral(builder.literal("report_progress", builder.functionType(builder.getLangBasic().getUInt16(), builder.getLangBasic().getUnit()))) {
+			ProgressMapper(core::NodeManager& manager, const EffortType progressReportingLimit) : mgr(manager), builder(manager),
+					reportingLiteral(builder.literal("report_progress", builder.functionType(builder.getLangBasic().getUInt16(), builder.getLangBasic().getUnit()))),
+					progressReportingLimit(progressReportingLimit) {
 				core::lang::markAsBuiltIn(reportingLiteral);
 			}
 
@@ -152,14 +153,14 @@ namespace transform {
 					const auto stmtEffort = analysis::features::estimateEffort(stmt);
 
 					// if the effort for the sub statement is high enough, we recursively handle this sub statement but report the current effort beforehand
-					if(stmtEffort > EFFORT_REPORTING_LIMIT) {
+					if(stmtEffort > progressReportingLimit) {
 						insertEffortReportingCall(it);
 						*it = resolveElement(stmt).as<core::StatementPtr>();
 						continue;
 					}
 
 					// insert reporting call before each exit point or if the effort until now and the stmtEffort are more than our limit
-					if(isExitPoint(stmt) || effort + stmtEffort > EFFORT_REPORTING_LIMIT) {
+					if(isExitPoint(stmt) || effort + stmtEffort > progressReportingLimit) {
 						insertEffortReportingCall(it);
 					}
 					effort += stmtEffort;
@@ -188,8 +189,8 @@ namespace transform {
 		};
 	}
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node) {
-		return ProgressMapper(node.getNodeManager()).map(node);
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const EffortType progressReportingLimit) {
+		return ProgressMapper(node.getNodeManager(), progressReportingLimit).map(node);
 	}
 
 } // end namespace transform

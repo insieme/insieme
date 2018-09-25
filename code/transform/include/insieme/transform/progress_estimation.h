@@ -37,13 +37,14 @@
 
 #pragma once
 
+#include "insieme/analysis/features/effort_estimation.h"
 #include "insieme/core/ir_node.h"
 
 
 namespace insieme {
 namespace transform {
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node);
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const analysis::features::EffortEstimationType progressReportingLimit);
 
 } // end namespace transform
 } // end namespace insieme
