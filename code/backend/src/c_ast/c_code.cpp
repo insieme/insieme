@@ -112,6 +112,13 @@ namespace c_ast {
 				#undef _GLIBCXX_HAVE_GETS    // correct broken config)"
 			<< "\n#endif\n";
 
+		// reduce compiler warnings
+		out << "#ifdef __GNUC__\n"
+			<< "	#pragma GCC diagnostic push\n"
+			<< "	#pragma GCC diagnostic ignored \"-Wunused-parameter\"\n"
+			<< "#endif\n";
+
+
 		out << "\n/* ------- Program Code --------- */\n\n";
 
 		// print topological sorted list of fragments

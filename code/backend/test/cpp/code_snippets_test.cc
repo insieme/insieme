@@ -473,8 +473,9 @@ namespace backend {
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "assert(");
-			EXPECT_PRED2(containsSubString, code, "\"This is an Insieme generated dummy function which should never be called\"");
+			EXPECT_PRED2(notContainsSubString, code, "Foo::test");
+			EXPECT_PRED2(notContainsSubString, code, "assert(");
+			EXPECT_PRED2(notContainsSubString, code, "\"This is an Insieme generated dummy function which should not end up in target code\"");
 		})
 	}
 

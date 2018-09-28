@@ -473,7 +473,7 @@ namespace backend {
 			auto callee = builder.literal("assert", builder.functionType(toVector<core::TypePtr>(basic.getInt4()), unit));
 			annotations::c::attachInclude(callee, "assert.h");
 			auto arg = builder.callExpr(basic.getBoolLAnd(), basic.getFalse(),
-			                            builder.wrapLazy(builder.castExpr(basic.getBool(),builder.stringLit("This is an Insieme generated dummy function which should never be called"))));
+			                            builder.wrapLazy(builder.castExpr(basic.getBool(),builder.stringLit("This is an Insieme generated dummy function which should not end up in target code"))));
 			auto call = builder.callExpr(unit, callee, arg);
 
 			return builder.lambdaExpr(funType, params, builder.compoundStmt(call));
@@ -1019,7 +1019,8 @@ namespace backend {
 			auto impl = memberFun->getImplementation();
 
 			// generate dummy lambda in cases of members without implementation (literals)
-			if(auto lit = impl.isa<core::LiteralPtr>()) {
+			bool isLiteral = impl.isa<core::LiteralPtr>();
+			if(isLiteral) {
 				core::IRBuilder builder(memberFun->getNodeManager());
 				auto funType = impl->getType().as<core::FunctionTypePtr>();
 				core::VariableList params = ::transform(funType->getParameterTypeList(), [&](const core::TypePtr t) {
@@ -1052,6 +1053,12 @@ namespace backend {
 				// set declaration to default
 				decl->flag = c_ast::BodyFlag::Default;
 
+				// delete definition by removing the prototypes requirement towards the definition
+				res->prototype->remRequirement(res->definition);
+			}
+
+			// remove definitions of dummy lambdas for literals
+			if (isLiteral) {
 				// delete definition by removing the prototypes requirement towards the definition
 				res->prototype->remRequirement(res->definition);
 			}
