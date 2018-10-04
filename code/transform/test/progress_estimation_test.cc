@@ -178,5 +178,206 @@ namespace transform {
 			})");
 	}
 
+	TEST(ProgressEstimation, NestedCompounds) {
+		const auto input = R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;          // effort 1
+				{
+					var ref<real<8>,f,f,plain> v2 = 7.0;        // effort 1
+					var ref<real<8>,f,f,plain> v3 = 8.0;        // effort 1
+					{
+						var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1; // effort 5
+					}
+				}
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;     // effort 5
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				{
+					report_progress(1ull);
+					var ref<real<8>,f,f,plain> v2 = 7.0;
+					report_progress(1ull);
+					var ref<real<8>,f,f,plain> v3 = 8.0;
+					{
+						report_progress(1ull);
+						var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+					}
+				}
+				report_progress(5ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+
+		TEST_PROGRESS(2, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				{
+					var ref<real<8>,f,f,plain> v2 = 7.0;
+					report_progress(2ull);
+					var ref<real<8>,f,f,plain> v3 = 8.0;
+					{
+						report_progress(1ull);
+						var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+					}
+				}
+				report_progress(5ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+
+		TEST_PROGRESS(5, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				{
+					var ref<real<8>,f,f,plain> v2 = 7.0;
+					var ref<real<8>,f,f,plain> v3 = 8.0;
+					{
+						report_progress(3ull);
+						var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+					}
+				}
+				report_progress(5ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+
+		TEST_PROGRESS(10, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				{
+					var ref<real<8>,f,f,plain> v2 = 7.0;
+					var ref<real<8>,f,f,plain> v3 = 8.0;
+					{
+						var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+					}
+				}
+				report_progress(8ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				{
+					var ref<real<8>,f,f,plain> v2 = 7.0;
+					var ref<real<8>,f,f,plain> v3 = 8.0;
+					{
+						var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+					}
+				}
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(13ull);
+			})");
+	}
+
+	TEST(ProgressEstimation, SimpleCalls) {
+		const auto input = R"(
+			def a = (p : int<4>) -> int<4> {
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def c = (p : int<4>) -> int<4> {
+				a(p);
+				b(p);
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			{
+				a(0);
+				b(1);
+				a(0) + b(1);
+				c(2);
+				b(a(b(a(3))));
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			def a = (p : int<4>) -> int<4> {
+				return p;                                 // unreported effort: 2
+			};
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				report_progress(1ull);
+				return p;                                 // unreported effort: 2
+			};
+			def c = (p : int<4>) -> int<4> {
+				a(p);
+				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
+				b(p);
+				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
+				return p;                                 // unreported effort: 2
+			};
+			{
+				a(0);
+				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				b(1);
+				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				a(0) + b(1);
+				report_progress(15ull);                   // 2 unreported + 2 unreported + (5 call overhead) * 2 + builtin overhead 1
+				c(2);
+				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				b(a(b(a(3))));
+				report_progress(28ull);                   // (2 unreported + 5 call overhead) * 4
+			})");
+
+		TEST_PROGRESS(10, input, R"(
+			def a = (p : int<4>) -> int<4> {
+				return p;                                 // unreported effort: 2
+			};
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				return p;                                 // unreported effort: 3
+			};
+			def c = (p : int<4>) -> int<4> {
+				a(p);
+				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
+				b(p);
+				report_progress(9ull);                    // 3 unreported + 5 call overhead + 1 implicit deref
+				return p;                                 // unreported effort: 2
+			};
+			{
+				a(0);
+				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				b(1);
+				report_progress(8ull);                    // 3 unreported + 5 call overhead
+				a(0) + b(1);
+				report_progress(16ull);                   // 2 unreported + 3 unreported + (5 call overhead) * 2 + builtin overhead 1
+				c(2);
+				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				b(a(b(a(3))));
+				report_progress(30ull);                   // (2 unreported + 3 unreported) * 2 + (5 call overhead) * 4
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			def a = (p : int<4>) -> int<4> {
+				return p;                                 // unreported effort: 2
+			};
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				return p;                                 // unreported effort: 3
+			};
+			def c = (p : int<4>) -> int<4> {
+				a(p);
+				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
+				b(p);
+				return p;                                 // unreported effort: 11
+			};
+			{
+				a(0);
+				b(1);
+				report_progress(15ull);                   // 2 unreported + 3 unreported + (5 call overhead) * 2
+				a(0) + b(1);
+				report_progress(16ull);                   // 2 unreported + 3 unreported + (5 call overhead) * 2 + builtin overhead 1
+				c(2);
+				report_progress(16ull);                   // 11 unreported + 5 call overhead
+				b(a(b(a(3))));
+				report_progress(30ull);                   // (2 unreported + 3 unreported) * 2 + (5 call overhead) * 4
+			})");
+	}
+
 } // end namespace transform
 } // end namespace insieme
