@@ -50,10 +50,9 @@
 namespace insieme {
 namespace transform {
 
-	core::NodeManager mgr;
-	core::IRBuilder builder(mgr);
-
 	TEST(IrExtension, Basic) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
 
 		const auto& lit = ext.getProgressReportingLiteral();
@@ -67,6 +66,8 @@ namespace transform {
 	}
 
 	TEST(IrExtension, Builder) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
 
 		const auto call = buildProgressReportingCall(mgr, 0);
@@ -82,6 +83,8 @@ namespace transform {
 	}
 
 	TEST(IrExtension, Extractor) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 		const auto call0 = buildProgressReportingCall(mgr, 0);
 		EXPECT_EQ(0, getReportedProgress(call0));
 
@@ -95,6 +98,8 @@ namespace transform {
 
 	#define TEST_PROGRESS(REPORTING_LIMIT, INPUT_IR, DESIRED_IR)                                           \
 	{                                                                                                      \
+		core::NodeManager mgr;                                                                               \
+		core::IRBuilder builder(mgr);                                                                        \
 		const auto _input = builder.normalize(builder.parseStmt(INPUT_IR));                                  \
 		assert_correct_ir(_input);                                                                           \
 		const auto _finalDesiredIr = std::string("decl report_progress : (uint<16>) -> unit;") + DESIRED_IR; \
@@ -107,7 +112,7 @@ namespace transform {
 	}
 
 
-	TEST(ProgressEstimation, SimpleStmts) {
+	TEST(SimpleTests, Basic) {
 		const auto input = R"(
 			{
 				var ref<real<8>,f,f,plain> v1 = 6.0;      // effort 1
@@ -178,7 +183,7 @@ namespace transform {
 			})");
 	}
 
-	TEST(ProgressEstimation, NestedCompounds) {
+	TEST(SimpleTests, NestedCompounds) {
 		const auto input = R"(
 			{
 				var ref<real<8>,f,f,plain> v1 = 6.0;          // effort 1
@@ -273,7 +278,7 @@ namespace transform {
 			})");
 	}
 
-	TEST(ProgressEstimation, SimpleCalls) {
+	TEST(SimpleTests, SimpleCalls) {
 		const auto input = R"(
 			def a = (p : int<4>) -> int<4> {
 				return p;                                 // effort 1 + 1 implicit deref
