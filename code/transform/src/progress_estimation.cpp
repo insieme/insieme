@@ -37,15 +37,11 @@
 
 #include "insieme/transform/progress_estimation.h"
 
-#include <string>
-
-#include "insieme/analysis/features/effort_estimation.h"
-
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_node.h"
-#include "insieme/core/lang/lang.h"
-#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/transform/node_replacer.h"
 
 
 namespace insieme {
@@ -54,151 +50,151 @@ namespace transform {
 	using EffortType = analysis::features::EffortEstimationType;
 
 	namespace {
-		core::CallExprPtr buildProgressReportingCallInternal(const core::IRBuilder& builder,
-		                                                     const core::LiteralPtr& reportingLiteral,
-		                                                     const EffortType progress) {
-			return builder.callExpr(reportingLiteral, builder.literal(builder.getLangBasic().getUInt16(), toString(progress)));
-		}
 
-		class ProgressMapper : public core::transform::CachedNodeMapping {
+		EffortType EFFORT_SIMPLE_OP = 1;
+		EffortType EFFORT_BRANCH = 2;
+		EffortType EFFORT_BUILTIN = 1;
+		EffortType EFFORT_FUN_CALL = 5;
 
-			core::NodeManager& mgr;
-			core::IRBuilder builder;
-			const ProgressEstomationExtension& progressExtension;
-
-			const EffortType progressReportingLimit;
-
-			const EffortType EFFORT_WHILE_LOOP_BRANCHING = 2;
-			const EffortType EFFORT_FOR_LOOP_INITILIZATION = 1;
-			const EffortType EFFORT_FOR_LOOP_BRANCHING = 2;
-			const EffortType EFFORT_FOR_LOOP_CONDITION = 1;
-			const EffortType EFFORT_FOR_LOOP_INCREMENT = 1;
-			const EffortType EFFORT_IF_BRANCHING = 1;
-
-		  public:
-			ProgressMapper(core::NodeManager& manager, const EffortType progressReportingLimit) : mgr(manager), builder(manager),
-					progressExtension(manager.getLangExtension<ProgressEstomationExtension>()),
-					progressReportingLimit(progressReportingLimit) { }
-
-		  private:
-			core::CallExprPtr buildProgressReportingCall(const EffortType progress) const {
-				return buildProgressReportingCallInternal(builder, progressExtension.getProgressReportingLiteral(), progress);
-			}
-
-			const core::NodePtr resolveElementInternal(const core::NodePtr& node, const EffortType startProgressOffset = 0) {
-				const auto& nodeType = node.getNodeType();
-				// prune calls to builtins
-				if (nodeType == core::NT_CallExpr) {
-					const auto& callee = node.as<core::CallExprPtr>()->getFunctionExpr();
-					if (core::lang::isBuiltIn(callee) || core::lang::isDerived(callee)) {
-						return node;
-					}
-				}
-
-				// only process CompoundStmts here
-				if(nodeType != core::NT_CompoundStmt) {
-					return node->substitute(mgr, *this);
-				}
-
-				const core::CompoundStmtPtr& compound = node.as<core::CompoundStmtPtr>();
-				core::StatementList stmts(compound.getStatements());
-
-				EffortType progress = startProgressOffset;
-
-				auto insertProgressReportingCall = [&](core::StatementList::iterator& it) {
-					if(progress != 0) {
-						it = stmts.insert(it, buildProgressReportingCall(progress));
-						++it;
-						progress = 0;
-					}
-				};
-
-				const auto exitPoints = core::analysis::getExitPoints(compound);
-				auto isExitPoint = [&](const core::StatementPtr& stmt) {
-					return ::any(exitPoints, [&](const auto& exitPoint) { return exitPoint.getDepth() == 2 && exitPoint.getAddressedNode() == stmt; });
-				};
-
-				for(auto it = stmts.begin(); it < stmts.end(); ++it) {
-					auto stmt = *it;
-
-					// certain nodes get a special handling
-					if(const auto& whileStmt = stmt.isa<core::WhileStmtPtr>()) {
-						// report the progress until here before the loop starts
-						insertProgressReportingCall(it);
-						// get the loop overhead
-						const auto loopOverhead = analysis::features::estimateEffort(whileStmt->getCondition()) + EFFORT_WHILE_LOOP_BRANCHING;
-						// now build a new loop and replace the old one
-						const auto newCondition = whileStmt->getCondition().substitute(mgr, *this);
-						const auto newBody = resolveElementInternal(whileStmt->getBody(), loopOverhead).as<core::StatementPtr>();
-						*it = builder.whileStmt(newCondition, newBody);
-						continue;
-
-					} else if(const auto& forStmt = stmt.isa<core::ForStmtPtr>()) {
-						// report the progress until here before the loop starts + the initialization
-						progress += EFFORT_FOR_LOOP_INITILIZATION;
-						insertProgressReportingCall(it);
-						// get the loop overhead
-						const auto loopOverhead = EFFORT_FOR_LOOP_BRANCHING + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_INCREMENT;
-						// now build a new loop and replace the old one
-						const auto newBody = resolveElementInternal(forStmt->getBody(), loopOverhead).as<core::StatementPtr>();
-						*it = builder.forStmt(forStmt->getDeclaration(), forStmt->getEnd(), forStmt->getStep(), newBody);
-						continue;
-
-					} else if(const auto& ifStmt = stmt.isa<core::IfStmtPtr>()) {
-						// add the condition overhead to both branches
-						progress += EFFORT_IF_BRANCHING + analysis::features::estimateEffort(ifStmt->getCondition());
-						// now build a new if stmt and replace the old one
-						const auto newCondition = ifStmt->getCondition().substitute(mgr, *this);
-						const auto newThenBody = resolveElementInternal(ifStmt->getThenBody(), progress).as<core::StatementPtr>();
-						const auto newElseBody = resolveElementInternal(ifStmt->getElseBody(), progress).as<core::StatementPtr>();
-						*it = builder.ifStmt(newCondition, newThenBody, newElseBody);
-						progress = 0;
-						continue;
-					}
-
-					const auto stmtProgress = analysis::features::estimateEffort(stmt);
-
-					// if the progress for the sub statement is high enough, we recursively handle this sub statement but report the current progress beforehand
-					if(stmtProgress > progressReportingLimit) {
-						insertProgressReportingCall(it);
-						*it = resolveElement(stmt).as<core::StatementPtr>();
-						continue;
-					}
-
-					// insert reporting call before each exit point or if the progress until now and the stmtProgress are more than our limit
-					if(isExitPoint(stmt) || progress + stmtProgress > progressReportingLimit) {
-						insertProgressReportingCall(it);
-					}
-					progress += stmtProgress;
-				}
-
-				// insert a reporting call in the end if there isn't already one and we don't have an exit point there
-				if(!stmts.empty()) {
-					const auto& lastStmt = stmts.back();
-					if(!progressExtension.isCallOfProgressReportingLiteral(lastStmt)) {
-						if(!isExitPoint(lastStmt) && progress != 0) {
-							stmts.push_back(buildProgressReportingCall(progress));
-						}
-					}
-
-					// if we are processing an empty compound which has a progress (i.e. because it got some start progress from it's parent), report it
-				} else if(progress != 0) {
-					stmts.push_back(buildProgressReportingCall(progress));
-				}
-
-				return builder.compoundStmt(stmts);
-			}
-
-			virtual const core::NodePtr resolveElement(const core::NodePtr& node) override {
-				return resolveElementInternal(node);
+		struct UnreportedProgressAnnotation : public core::value_annotation::copy_on_migration {
+			EffortType progress;
+			UnreportedProgressAnnotation(const EffortType& progress) : progress(progress) {}
+			bool operator==(const UnreportedProgressAnnotation& other) const {
+				return progress == other.progress;
 			}
 		};
+
+		EffortType getNodeEffort(const core::NodePtr& node) {
+			// get cached value from annotation if present
+			if(node.hasAttachedValue<UnreportedProgressAnnotation>()) {
+				return node.getAttachedValue<UnreportedProgressAnnotation>().progress;
+			}
+
+			// otherwise the effort depends on the node type
+			switch(node->getNodeType()) {
+				case core::NT_BreakStmt:
+				case core::NT_ContinueStmt:
+				case core::NT_ReturnStmt:
+				case core::NT_DeclarationStmt:
+					return EFFORT_SIMPLE_OP;
+
+				case core::NT_SwitchStmt:
+					return EFFORT_BRANCH;
+
+				case core::NT_CallExpr: {
+					const auto& callee = node.as<core::CallExprPtr>()->getFunctionExpr();
+					if(core::lang::isBuiltIn(callee) || core::lang::isDerived(callee)) {
+						return EFFORT_BUILTIN;
+					} else {
+						return EFFORT_FUN_CALL;
+					}
+				}
+
+				default:
+					return 0;
+			}
+		}
+
+		EffortType getUnreportedProgress(const core::NodePtr& parent) {
+			EffortType progress = 0;
+
+			core::visitDepthFirstPrunable(parent, [&](const core::NodePtr& node) {
+				// don't process or descend into types
+				if(node.getNodeCategory() == core::NC_Type) {
+					return core::Prune;
+				}
+
+				// add the unreported progress for every child node
+				progress += getNodeEffort(node);
+
+				// but don't descend into lambda expressions. These already have their unreported progress attached and we already added that
+				if(node.getNodeType() == core::NT_LambdaExpr) {
+					return core::Prune;
+				}
+				return core::Descent;
+			});
+
+			return progress;
+		}
+
+		core::CompoundStmtPtr handleCompound(EffortType& progress, const core::CompoundStmtPtr& compound, const EffortType progressReportingLimit, bool isRoot) {
+			core::NodeManager& mgr = compound.getNodeManager();
+			core::IRBuilder builder(mgr);
+			core::StatementList stmts(compound.getStatements());
+
+			// if the current progress is 0, we insert a new statement into the list and update the iterator
+			auto insertProgressReportingCall = [&](core::StatementList::iterator& it) {
+				if(progress != 0) {
+					it = stmts.insert(it, buildProgressReportingCall(mgr, progress));
+					++it;
+					progress = 0;
+				}
+			};
+
+			for(auto it = stmts.begin(); it < stmts.end(); ++it) {
+				auto stmt = *it;
+
+				// certain nodes get a special handling
+				if(const auto& innerCompound = stmt.isa<core::CompoundStmtPtr>()) {
+					*it = handleCompound(progress, innerCompound, progressReportingLimit, false);
+					continue;
+				}
+
+				const auto stmtProgress = getUnreportedProgress(stmt);
+
+				// if the progress until now and the stmtProgress are more than our limit
+				if(progress + stmtProgress > progressReportingLimit) {
+					// we report the progress until here
+					insertProgressReportingCall(it);
+				}
+				progress += stmtProgress;
+			}
+
+			// if we do have some unreported progress left and this is the root compound, we report it here
+			if(isRoot && progress != 0) {
+				stmts.push_back(buildProgressReportingCall(mgr, progress));
+			}
+
+			return builder.compoundStmt(stmts);
+		}
+
+		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const EffortType progressReportingLimit) {
+			// first we transform all the lambdas bottom to top. We add reporting calls and annotate the unreported progress to them
+			auto res = core::transform::transformBottomUp(node, [&](const core::LambdaExprPtr& lambda) {
+				auto res = lambda;
+				EffortType progress = 0;
+
+				// we do not modify derived lambdas
+				if(core::lang::isDerived(lambda)) {
+					progress = EFFORT_BUILTIN;
+
+					// every other lambda is processed though
+				} else {
+					// we create a new body with inserted reporting calls if necessary
+					auto newBody = handleCompound(progress, lambda->getBody(), progressReportingLimit, false);
+					res = core::transform::replaceNode(res.getNodeManager(), core::LambdaExprAddress(res)->getBody(), newBody).as<core::LambdaExprPtr>();
+				}
+
+				// and we attach the unreported progress to the lambda itself
+				res.attachValue(UnreportedProgressAnnotation{progress});
+				return res;
+			}, core::transform::globalReplacement);
+
+			// this is to ensure that if we are handling a compound only (mostly for testing), we also report the progress at it's end
+			if(res.getNodeType() == core::NT_CompoundStmt) {
+				EffortType progress = 0;
+				return handleCompound(progress, res.as<core::CompoundStmtPtr>(), progressReportingLimit, true);
+			}
+
+			return res;
+		}
 	}
 
 
 	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const EffortType progress) {
+		core::IRBuilder builder(manager);
 		const auto& ext = manager.getLangExtension<ProgressEstomationExtension>();
-		return buildProgressReportingCallInternal(core::IRBuilder(manager), ext.getProgressReportingLiteral(), progress);
+		return builder.callExpr(ext.getProgressReportingLiteral(), builder.literal(builder.getLangBasic().getUInt16(), toString(progress)));
 	}
 
 	analysis::features::EffortEstimationType getReportedProgress(const core::NodePtr& node) {
@@ -209,7 +205,7 @@ namespace transform {
 	}
 
 	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const EffortType progressReportingLimit) {
-		return ProgressMapper(node.getNodeManager(), progressReportingLimit).map(node);
+		return applyProgressEstimationImpl(node, progressReportingLimit);
 	}
 
 } // end namespace transform
