@@ -137,12 +137,12 @@ namespace transform {
 			for(auto it = stmts.begin(); it < stmts.end(); ++it) {
 				auto stmt = *it;
 
-				// certain nodes get a special handling
+				// special handling for compounds
 				if(const auto& innerCompound = stmt.isa<core::CompoundStmtPtr>()) {
 					// compound statement children are handeled recursively, counting from the current progress
 					*it = handleCompound(progress, innerCompound, progressReportingLimit, false);
-					continue;
 
+					// special handling for for loops
 				} else if(const auto& forLoop = stmt.isa<core::ForStmtPtr>()) {
 					// we have to report the current progress before entering the for loop. We also add some overhead for the loop iterator variable
 					progress += EFFORT_FOR_LOOP_ITERATOR;
@@ -151,8 +151,8 @@ namespace transform {
 					EffortType bodyProgress = EFFORT_BRANCH + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_ITERATOR_UPDATE;
 					const auto newBody = handleCompound(bodyProgress, forLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::ForStmtAddress(forLoop)->getBody(), newBody).as<core::ForStmtPtr>();
-					continue;
 
+					// special handling for while loops
 				} else if(const auto& whileLoop = stmt.isa<core::WhileStmtPtr>()) {
 					// we have to report the current progress before entering the while loop
 					insertProgressReportingCall(it);
@@ -160,17 +160,18 @@ namespace transform {
 					EffortType bodyProgress = EFFORT_BRANCH + getUnreportedProgress(whileLoop->getCondition());
 					const auto newBody = handleCompound(bodyProgress, whileLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::WhileStmtAddress(whileLoop)->getBody(), newBody).as<core::WhileStmtPtr>();
-					continue;
-				}
 
-				const auto stmtProgress = getUnreportedProgress(stmt);
+					// all other nodes are processed the same
+				} else {
+					const auto stmtProgress = getUnreportedProgress(stmt);
 
-				// if the progress until now and the stmtProgress are more than our limit
-				if(progress + stmtProgress > progressReportingLimit) {
-					// we report the progress until here
-					insertProgressReportingCall(it);
+					// if the progress until now and the stmtProgress are more than our limit
+					if(progress + stmtProgress > progressReportingLimit) {
+						// we report the progress until here
+						insertProgressReportingCall(it);
+					}
+					progress += stmtProgress;
 				}
-				progress += stmtProgress;
 			}
 
 			// if we do have some unreported progress left and this is the root compound, we report it here
