@@ -149,8 +149,17 @@ namespace transform {
 					insertProgressReportingCall(it);
 					// now we handle the body. Each iteration gets a start progress offset which accounts for evaluating the condition as well as updating the iterator
 					EffortType bodyProgress = EFFORT_BRANCH + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_ITERATOR_UPDATE;
-					const auto newBody = handleCompound(bodyProgress, forLoop->getBody(), progressReportingLimit, true);
+					const auto newBody = handleCompound(bodyProgress, forLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::ForStmtAddress(forLoop)->getBody(), newBody).as<core::ForStmtPtr>();
+					continue;
+
+				} else if(const auto& whileLoop = stmt.isa<core::WhileStmtPtr>()) {
+					// we have to report the current progress before entering the while loop
+					insertProgressReportingCall(it);
+					// now we handle the body. Each iteration gets a start progress offset which accounts the unreported progress of the condition + some branching overhead
+					EffortType bodyProgress = EFFORT_BRANCH + getUnreportedProgress(whileLoop->getCondition());
+					const auto newBody = handleCompound(bodyProgress, whileLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					*it = core::transform::replaceNode(mgr, core::WhileStmtAddress(whileLoop)->getBody(), newBody).as<core::WhileStmtPtr>();
 					continue;
 				}
 

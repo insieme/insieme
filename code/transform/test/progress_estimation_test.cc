@@ -461,5 +461,107 @@ namespace transform {
 			})");
 	}
 
+	TEST(WhileLoops, Simple) {
+		const auto input = R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;         // unrelated code
+				var ref<int<4>,f,f,plain> v1 = 1;         // iterator variable
+				while(*v1<5) {
+					gen_post_inc(v1);
+				}
+				var ref<int<4>,f,f,plain> v2 = 2;         // unrelated code
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				report_progress(1ull);
+				var ref<int<4>,f,f,plain> v1 = 1;
+				report_progress(1ull);
+				while(*v1<5) {
+					report_progress(4ull);                  // 2 branch overhead, 1 builtin from condition, 1 implicit deref from condition
+					gen_post_inc(v1);
+					report_progress(2ull);                  // 1 builtin, 1 implicit deref
+				}
+				var ref<int<4>,f,f,plain> v2 = 2;
+				report_progress(1ull);
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				var ref<int<4>,f,f,plain> v1 = 1;
+				report_progress(2ull);
+				while(*v1<5) {
+					gen_post_inc(v1);
+					report_progress(6ull);                  // 2 branch overhead, 1 builtin from condition, 1 implicit deref from condition, 1 builtin , 1 implicit deref
+				}
+				var ref<int<4>,f,f,plain> v2 = 2;
+				report_progress(1ull);
+			})");
+	}
+
+	TEST(WhileLoops, FunctionCalls) {
+		const auto input = R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				return true;                              // effort 1
+			};
+			{
+				var ref<int<4>,f,f,plain> v1 = 1;         // iterator variable
+				while(c(*v1)) {
+					b(*v1);
+					gen_post_inc(v1);
+				}
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				report_progress(1ull);
+				return p;                                  // unreported effort: 2
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				report_progress(8ull);                     // 2 unreported + 5 call overhead + 1 implicit deref
+				return true;                               // unreported effort: 1
+			};
+			{
+				var ref<int<4>,f,f,plain> v1 = 1;
+				report_progress(1ull);
+				while(c(*v1)) {
+					report_progress(9ull);                   // 2 branch overhead, 1 implicit deref from condition, 5 call overhead, 1 unreported
+					b(*v1);
+					report_progress(8ull);                   // 2 unreported + 5 call overhead + 1 implicit deref
+					gen_post_inc(v1);
+					report_progress(2ull);                   // 1 builtin, 1 implicit deref
+				}
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				return p;                                  // unreported effort: 3
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				return true;                               // unreported effort: 10
+			};
+			{
+				var ref<int<4>,f,f,plain> v1 = 1;
+				report_progress(1ull);
+				while(c(*v1)) {
+					report_progress(18ull);                  // 2 branch overhead, 1 implicit deref from condition, 5 call overhead, 10 unreported
+					b(*v1);
+					gen_post_inc(v1);
+					report_progress(11ull);                  // 3 unreported + 5 call overhead + 1 implicit deref + 1 builtin + 1 implicit deref
+				}
+			})");
+	}
+
 } // end namespace transform
 } // end namespace insieme
