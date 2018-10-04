@@ -384,5 +384,82 @@ namespace transform {
 			})");
 	}
 
+	TEST(ForLoops, Simple) {
+		const auto input = R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				for(int<4> v1 = 0 .. 10 : 1) {
+					v0 = v0 + v1;
+				};
+				var ref<int<4>,f,f,plain> v2 = 2;
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				report_progress(2ull);                    // 1 from stmt above, 1 for iterator variable overhead
+				for(int<4> v1 = 0 .. 10 : 1) {
+					report_progress(4ull);                  // 2 branch overhead, 1 condition comparison, 1 iterator update
+					v0 = v0 + v1;
+					report_progress(3ull);                  // 1 assignment, 1 implicit deref, 1 builtin. Iterator variable access is free
+				};
+				var ref<int<4>,f,f,plain> v2 = 2;
+				report_progress(1ull);                    // 1 from stmt above
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				report_progress(2ull);                    // 1 from stmt above, 1 for iterator variable overhead
+				for(int<4> v1 = 0 .. 10 : 1) {
+					v0 = v0 + v1;
+					report_progress(7ull);                  // 2 branch overhead, 1 condition comparison, 1 iterator update, 1 assignment, 1 implicit deref, 1 builtin. Iterator variable access is free
+				};
+				var ref<int<4>,f,f,plain> v2 = 2;
+				report_progress(1ull);                    // 1 from stmt above
+			})");
+	}
+
+	TEST(ForLoops, FunctionCalls) {
+		const auto input = R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			{
+				for(int<4> v1 = 0 .. 10 : 1) {
+					b(v1);
+				};
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				report_progress(1ull);
+				return p;                                 // unreported effort: 2
+			};
+			{
+				report_progress(1ull);                    // 1 for iterator variable overhead
+				for(int<4> v1 = 0 .. 10 : 1) {
+					report_progress(4ull);                  // 2 branch overhead, 1 condition comparison, 1 iterator update
+					b(v1);
+					report_progress(7ull);                  // 2 unreported + 5 call overhead
+				};
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				return p;                                 // unreported effort: 3
+			};
+			{
+				report_progress(1ull);                    // 1 for iterator variable overhead
+				for(int<4> v1 = 0 .. 10 : 1) {
+					b(v1);
+					report_progress(12ull);                 // 2 branch overhead, 1 condition comparison, 1 iterator update, 3 unreported + 5 call overhead
+				};
+			})");
+	}
+
 } // end namespace transform
 } // end namespace insieme

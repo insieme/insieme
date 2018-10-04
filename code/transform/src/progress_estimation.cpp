@@ -55,6 +55,9 @@ namespace transform {
 		EffortType EFFORT_BRANCH = 2;
 		EffortType EFFORT_BUILTIN = 1;
 		EffortType EFFORT_FUN_CALL = 5;
+		EffortType EFFORT_FOR_LOOP_ITERATOR = 1;
+		EffortType EFFORT_FOR_LOOP_CONDITION = 1;
+		EffortType EFFORT_FOR_LOOP_ITERATOR_UPDATE = 1;
 
 		struct UnreportedProgressAnnotation : public core::value_annotation::copy_on_migration {
 			EffortType progress;
@@ -136,7 +139,18 @@ namespace transform {
 
 				// certain nodes get a special handling
 				if(const auto& innerCompound = stmt.isa<core::CompoundStmtPtr>()) {
+					// compound statement children are handeled recursively, counting from the current progress
 					*it = handleCompound(progress, innerCompound, progressReportingLimit, false);
+					continue;
+
+				} else if(const auto& forLoop = stmt.isa<core::ForStmtPtr>()) {
+					// we have to report the current progress before entering the for loop. We also add some overhead for the loop iterator variable
+					progress += EFFORT_FOR_LOOP_ITERATOR;
+					insertProgressReportingCall(it);
+					// now we handle the body. Each iteration gets a start progress offset which accounts for evaluating the condition as well as updating the iterator
+					EffortType bodyProgress = EFFORT_BRANCH + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_ITERATOR_UPDATE;
+					const auto newBody = handleCompound(bodyProgress, forLoop->getBody(), progressReportingLimit, true);
+					*it = core::transform::replaceNode(mgr, core::ForStmtAddress(forLoop)->getBody(), newBody).as<core::ForStmtPtr>();
 					continue;
 				}
 
