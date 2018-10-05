@@ -161,6 +161,20 @@ namespace transform {
 					const auto newBody = handleCompound(bodyProgress, whileLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::WhileStmtAddress(whileLoop)->getBody(), newBody).as<core::WhileStmtPtr>();
 
+					// special handling for if/else stmts
+				} else if(const auto& ifStmt = stmt.isa<core::IfStmtPtr>()) {
+					// acount for the branching overhead and the unreported progress of the condition
+					progress += EFFORT_BRANCH + getUnreportedProgress(ifStmt->getCondition());
+					// now handle both branches with a start offset of the progress we have at the moment
+					EffortType bodyProgress = progress;
+					core::NodeMap replacements;
+					replacements[core::IfStmtAddress(ifStmt)->getThenBody()] = handleCompound(bodyProgress, ifStmt->getThenBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					bodyProgress = progress;
+					replacements[core::IfStmtAddress(ifStmt)->getElseBody()] = handleCompound(bodyProgress, ifStmt->getElseBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					*it = core::transform::replaceAllGen(mgr, ifStmt, replacements);
+					// the progress has been reported in either branch
+					progress = 0;
+
 					// all other nodes are processed the same
 				} else {
 					const auto stmtProgress = getUnreportedProgress(stmt);

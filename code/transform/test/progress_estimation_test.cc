@@ -563,5 +563,158 @@ namespace transform {
 			})");
 	}
 
+	TEST(IfStmt, Simple) {
+		const auto input = R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;         // unrelated code
+				if(true) {
+					var ref<int<4>,f,f,plain> v1 = 1;
+				}
+				var ref<int<4>,f,f,plain> v2 = 2;         // unrelated code
+				if(*v0 == *v2) {
+					var ref<int<4>,f,f,plain> v3 = 5+4+3+2+1;
+				} else {
+					var ref<int<4>,f,f,plain> v4 = 4;
+				}
+				var ref<int<4>,f,f,plain> v5 = 5;         // unrelated code
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				if(true) {
+					report_progress(3ull);                  // 1 from stmt above, 2 branch overhead
+					var ref<int<4>,f,f,plain> v1 = 1;
+					report_progress(1ull);                  // 1 from stmt above
+				} else {
+					report_progress(3ull);                  // 1 from stmt above if, 2 branch overhead (note that every if will end up with an else branch even if it had none before)
+				}
+				var ref<int<4>,f,f,plain> v2 = 2;
+				if(*v0 == *v2) {
+					report_progress(6ull);                  // 1 from stmt above if, 2 branch overhead, 1 builtin call, 2 from deref
+					var ref<int<4>,f,f,plain> v3 = 5+4+3+2+1;
+					report_progress(5ull);
+				} else {
+					report_progress(6ull);                  // 1 from stmt above if, 2 branch overhead, 1 builtin call, 2 from deref
+					var ref<int<4>,f,f,plain> v4 = 4;
+					report_progress(1ull);
+				}
+				var ref<int<4>,f,f,plain> v5 = 5;
+				report_progress(1ull);                    // 1 from stmt above
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				if(true) {
+					var ref<int<4>,f,f,plain> v1 = 1;
+					report_progress(4ull);                  // 2 from stmts above, 2 branch overhead
+				} else {
+					report_progress(3ull);                  // 1 from stmt above if, 2 branch overhead (note that every if will end up with an else branch even if it had none before)
+				}
+				var ref<int<4>,f,f,plain> v2 = 2;
+				if(*v0 == *v2) {
+					var ref<int<4>,f,f,plain> v3 = 5+4+3+2+1;
+					report_progress(11ull);                 // 1 from stmt above if, 5 from stmt above, 2 branch overhead, 1 builtin call, 2 from deref
+				} else {
+					var ref<int<4>,f,f,plain> v4 = 4;
+					report_progress(7ull);                  // 1 from stmt above if, 1 from stmt above, 2 branch overhead, 1 builtin call, 2 from deref
+				}
+				var ref<int<4>,f,f,plain> v5 = 5;
+				report_progress(1ull);                    // 1 from stmt above
+			})");
+	}
+
+	TEST(IfStmt, FunctionCalls) {
+		const auto input = R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				return true;                              // effort 1
+			};
+			{
+				b(0);                                     // unrelated code
+				var ref<int<4>,f,f,plain> v0 = 2;         // unrelated code
+				if(*v0 == b(1)) {
+					var ref<int<4>,f,f,plain> v4 = 4;
+				} else {
+					c(b(*v0));
+				}
+			})";
+
+		TEST_PROGRESS(1, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				report_progress(1ull);
+				return p;                                  // unreported effort: 2
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				report_progress(8ull);                     // 2 unreported + 5 call overhead + 1 implicit deref
+				return true;                               // unreported effort: 1
+			};
+			{
+				b(0);
+				report_progress(7ull);                     // 2 unreported, 5 call overhead
+				var ref<int<4>,f,f,plain> v0 = 2;
+				if(*v0 == b(1)) {
+					report_progress(12ull);                  // 1 from stmt above if, 2 branch overhead, 1 from deref, 2 unreported, 5 call overhead, 1 from builtin
+					var ref<int<4>,f,f,plain> v4 = 4;
+					report_progress(1ull);
+				} else {
+					report_progress(12ull);                  // 1 from stmt above if, 2 branch overhead, 1 from deref, 2 unreported, 5 call overhead, 1 from builtin
+					c(b(*v0));
+					report_progress(14ull);                  // 1 unreported, 2 unteported, 5 call overhead * 2, 1 from deref
+				}
+			})");
+
+		TEST_PROGRESS(15, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				return p;                                  // unreported effort: 3
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				return true;                               // unreported effort: 10
+			};
+			{
+				b(0);
+				var ref<int<4>,f,f,plain> v0 = 2;
+				if(*v0 == b(1)) {
+					report_progress(21ull);                  // 9 from stmts above if, 2 branch overhead, 1 from deref, 3 unreported, 5 call overhead, 1 from builtin
+					var ref<int<4>,f,f,plain> v4 = 4;
+					report_progress(1ull);
+				} else {
+					report_progress(21ull);                  // 9 from stmts above if, 2 branch overhead, 1 from deref, 3 unreported, 5 call overhead, 1 from builtin
+					c(b(*v0));
+					report_progress(24ull);                  // 3 unreported, 10 unteported, 5 call overhead * 2, 1 from deref
+				}
+			})");
+
+		TEST_PROGRESS(50, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				return p;                                  // unreported effort: 3
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				return true;                               // unreported effort: 10
+			};
+			{
+				b(0);
+				var ref<int<4>,f,f,plain> v0 = 2;
+				if(*v0 == b(1)) {
+					var ref<int<4>,f,f,plain> v4 = 4;
+					report_progress(22ull);                  // 9 from stmts above if, 1 from stmt above, 2 branch overhead, 1 from deref, 3 unreported, 5 call overhead, 1 from builtin
+				} else {
+					c(b(*v0));
+					report_progress(45ull);                  // 9 from stmts above if, 2 branch overhead, 1 from deref, 3 unreported, 5 call overhead, 1 from builtin, 3 unreported, 10 unteported, 5 call overhead * 2, 1 from deref
+				}
+			})");
+	}
+
 } // end namespace transform
 } // end namespace insieme
