@@ -134,6 +134,11 @@ namespace transform {
 				}
 			};
 
+			const auto exitPoints = core::analysis::getExitPoints(compound);
+			auto isExitPoint = [&exitPoints](const core::StatementPtr& stmt) {
+				return ::any(exitPoints, [&stmt](const auto& exitPoint) { return exitPoint.getDepth() == 2 && exitPoint.getAddressedNode() == stmt; });
+			};
+
 			for(auto it = stmts.begin(); it < stmts.end(); ++it) {
 				auto stmt = *it;
 
@@ -179,12 +184,20 @@ namespace transform {
 				} else {
 					const auto stmtProgress = getUnreportedProgress(stmt);
 
-					// if the progress until now and the stmtProgress are more than our limit
-					if(progress + stmtProgress > progressReportingLimit) {
-						// we report the progress until here
+					// if the current node is an exit point of the surrounding stmt
+					if(isExitPoint(stmt)) {
+						// we add the progress for that exit point as well before reporting our current progress
+						progress += stmtProgress;
 						insertProgressReportingCall(it);
+
+					} else {
+						// if the progress until now and the stmtProgress are more than our limit
+						if(progress + stmtProgress > progressReportingLimit) {
+							// we report the progress until here
+							insertProgressReportingCall(it);
+						}
+						progress += stmtProgress;
 					}
-					progress += stmtProgress;
 				}
 			}
 
@@ -194,6 +207,30 @@ namespace transform {
 			}
 
 			return builder.compoundStmt(stmts);
+		}
+
+		core::CompoundStmtPtr inlineSmallLambdaBodies(EffortType& progress, const core::CompoundStmtPtr& compound, const EffortType progressReportingLimit) {
+			auto& mgr = compound.getNodeManager();
+			const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
+			// only proceed if we could at least have a reporting call and a return stmt
+			if(compound.size() >= 2) {
+				// if we only have one reporting call
+				if(core::analysis::countInstances(compound, ext.getProgressReportingLiteral(), true) == 1) {
+					const auto& reportingCall = *(compound.end() - 2);
+					// if that is the penultimate stmt and the last one is a return
+					if(ext.isCallOfProgressReportingLiteral(reportingCall) && (*(compound.end() - 1)).isa<core::ReturnStmtPtr>()) {
+						const auto reportedProgress = getReportedProgress(reportingCall);
+						// and the reported progress is below the reporting limit, we inline this progress (i.e. remove the reporting call and increase the unreported effort)
+						if(reportedProgress < progressReportingLimit) {
+							progress += reportedProgress;
+							core::StatementList stmts(compound.begin(), compound.end());
+							stmts.erase(stmts.end() - 2);
+							return core::IRBuilder(mgr).compoundStmt(stmts);
+						}
+					}
+				}
+			}
+			return compound;
 		}
 
 		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const EffortType progressReportingLimit) {
@@ -210,6 +247,7 @@ namespace transform {
 				} else {
 					// we create a new body with inserted reporting calls if necessary
 					auto newBody = handleCompound(progress, lambda->getBody(), progressReportingLimit, false);
+					newBody = inlineSmallLambdaBodies(progress, newBody, progressReportingLimit);
 					res = core::transform::replaceNode(res.getNodeManager(), core::LambdaExprAddress(res)->getBody(), newBody).as<core::LambdaExprPtr>();
 				}
 

@@ -292,57 +292,74 @@ namespace transform {
 				b(p);
 				return p;                                 // effort 1 + 1 implicit deref
 			};
+			def d = () -> unit {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				var ref<int<4>,f,f,plain> v2 = 1;         // effort 1
+			};
 			{
 				a(0);
 				b(1);
 				a(0) + b(1);
 				c(2);
 				b(a(b(a(3))));
+				d();
 			})";
 
 		TEST_PROGRESS(1, input, R"(
 			def a = (p : int<4>) -> int<4> {
-				return p;                                 // unreported effort: 2
+				report_progress(2ull);                    // 1 from return below, 1 from implicit deref below
+				return p;                                 // unreported effort: 0
 			};
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				report_progress(1ull);
-				return p;                                 // unreported effort: 2
+				report_progress(3ull);                    // 1 from stmt above, 1 from return below, 1 from implicit deref below
+				return p;                                 // unreported effort: 0
 			};
 			def c = (p : int<4>) -> int<4> {
 				a(p);
-				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
+				report_progress(6ull);                    // 5 call overhead + 1 implicit deref
 				b(p);
-				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
-				return p;                                 // unreported effort: 2
+				report_progress(8ull);                    // 5 call overhead + 1 implicit deref, 1 from return below, 1 from implicit deref below
+				return p;                                 // unreported effort: 0
+			};
+			def d = () -> unit {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				report_progress(1ull);                    // 1 from stmt above
+				var ref<int<4>,f,f,plain> v2 = 1;         // unreported effort: 1
 			};
 			{
 				a(0);
-				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				report_progress(5ull);                    // 5 call overhead
 				b(1);
-				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				report_progress(5ull);                    // 5 call overhead
 				a(0) + b(1);
-				report_progress(15ull);                   // 2 unreported + 2 unreported + (5 call overhead) * 2 + builtin overhead 1
+				report_progress(11ull);                   // (5 call overhead) * 2 + builtin overhead 1
 				c(2);
-				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				report_progress(5ull);                    // 5 call overhead
 				b(a(b(a(3))));
-				report_progress(28ull);                   // (2 unreported + 5 call overhead) * 4
+				report_progress(20ull);                   // (5 call overhead) * 4
+				d();
+				report_progress(6ull);                    // 1 unreported + 5 call overhead
 			})");
 
 		TEST_PROGRESS(10, input, R"(
 			def a = (p : int<4>) -> int<4> {
-				return p;                                 // unreported effort: 2
+				return p;                                 // unreported effort: 2 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				return p;                                 // unreported effort: 3
+				return p;                                 // unreported effort: 3 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			def c = (p : int<4>) -> int<4> {
 				a(p);
 				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
 				b(p);
-				report_progress(9ull);                    // 3 unreported + 5 call overhead + 1 implicit deref
-				return p;                                 // unreported effort: 2
+				report_progress(11ull);                   // 3 unreported + 5 call overhead + 1 implicit deref, 1 from return below, 1 from implicit deref below
+				return p;                                 // unreported effort: 0
+			};
+			def d = () -> unit {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				var ref<int<4>,f,f,plain> v2 = 1;         // unreported effort: 2
 			};
 			{
 				a(0);
@@ -352,24 +369,31 @@ namespace transform {
 				a(0) + b(1);
 				report_progress(16ull);                   // 2 unreported + 3 unreported + (5 call overhead) * 2 + builtin overhead 1
 				c(2);
-				report_progress(7ull);                    // 2 unreported + 5 call overhead
+				report_progress(5ull);                    // 5 call overhead
 				b(a(b(a(3))));
 				report_progress(30ull);                   // (2 unreported + 3 unreported) * 2 + (5 call overhead) * 4
+				d();
+				report_progress(7ull);                    // 2 unreported + 5 call overhead
 			})");
 
 		TEST_PROGRESS(15, input, R"(
 			def a = (p : int<4>) -> int<4> {
-				return p;                                 // unreported effort: 2
+				return p;                                 // unreported effort: 2 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				return p;                                 // unreported effort: 3
+				return p;                                 // unreported effort: 3 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			def c = (p : int<4>) -> int<4> {
 				a(p);
 				report_progress(8ull);                    // 2 unreported + 5 call overhead + 1 implicit deref
 				b(p);
-				return p;                                 // unreported effort: 11
+				report_progress(11ull);                   // 3 unreported + 5 call overhead + 1 implicit deref, 1 from return below, 1 from implicit deref below
+				return p;                                 // unreported effort: 0
+			};
+			def d = () -> unit {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				var ref<int<4>,f,f,plain> v2 = 1;         // unreported effort: 2
 			};
 			{
 				a(0);
@@ -378,9 +402,11 @@ namespace transform {
 				a(0) + b(1);
 				report_progress(16ull);                   // 2 unreported + 3 unreported + (5 call overhead) * 2 + builtin overhead 1
 				c(2);
-				report_progress(16ull);                   // 11 unreported + 5 call overhead
+				report_progress(5ull);                    // 5 call overhead
 				b(a(b(a(3))));
 				report_progress(30ull);                   // (2 unreported + 3 unreported) * 2 + (5 call overhead) * 4
+				d();
+				report_progress(7ull);                    // 2 unreported + 5 call overhead
 			})");
 	}
 
@@ -435,22 +461,22 @@ namespace transform {
 		TEST_PROGRESS(1, input, R"(
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				report_progress(1ull);
-				return p;                                 // unreported effort: 2
+				report_progress(3ull);                    // 1 from stmt above, 1 from return below, 1 from implicit deref below
+				return p;                                 // unreported effort: 0
 			};
 			{
 				report_progress(1ull);                    // 1 for iterator variable overhead
 				for(int<4> v1 = 0 .. 10 : 1) {
 					report_progress(4ull);                  // 2 branch overhead, 1 condition comparison, 1 iterator update
 					b(v1);
-					report_progress(7ull);                  // 2 unreported + 5 call overhead
+					report_progress(5ull);                  // 5 call overhead
 				};
 			})");
 
 		TEST_PROGRESS(15, input, R"(
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				return p;                                 // unreported effort: 3
+				return p;                                 // unreported effort: 3 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			{
 				report_progress(1ull);                    // 1 for iterator variable overhead
@@ -522,21 +548,21 @@ namespace transform {
 		TEST_PROGRESS(1, input, R"(
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				report_progress(1ull);
-				return p;                                  // unreported effort: 2
+				report_progress(3ull);                     // 1 from stmt above, 1 from return below, 1 from implicit deref below
+				return p;                                  // unreported effort: 0
 			};
 			def c = (p : int<4>) -> bool {
 				b(p);
-				report_progress(8ull);                     // 2 unreported + 5 call overhead + 1 implicit deref
-				return true;                               // unreported effort: 1
+				report_progress(7ull);                     // 5 call overhead + 1 implicit deref, 1 from return below
+				return true;                               // unreported effort: 0
 			};
 			{
 				var ref<int<4>,f,f,plain> v1 = 1;
 				report_progress(1ull);
 				while(c(*v1)) {
-					report_progress(9ull);                   // 2 branch overhead, 1 implicit deref from condition, 5 call overhead, 1 unreported
+					report_progress(8ull);                   // 2 branch overhead, 1 implicit deref from condition, 5 call overhead
 					b(*v1);
-					report_progress(8ull);                   // 2 unreported + 5 call overhead + 1 implicit deref
+					report_progress(6ull);                   // 5 call overhead + 1 implicit deref
 					gen_post_inc(v1);
 					report_progress(2ull);                   // 1 builtin, 1 implicit deref
 				}
@@ -545,11 +571,11 @@ namespace transform {
 		TEST_PROGRESS(15, input, R"(
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				return p;                                  // unreported effort: 3
+				return p;                                  // unreported effort: 3 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			def c = (p : int<4>) -> bool {
 				b(p);
-				return true;                               // unreported effort: 10
+				return true;                               // unreported effort: 10 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			{
 				var ref<int<4>,f,f,plain> v1 = 1;
@@ -648,37 +674,37 @@ namespace transform {
 		TEST_PROGRESS(1, input, R"(
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				report_progress(1ull);
-				return p;                                  // unreported effort: 2
+				report_progress(3ull);                     // 1 from stmt above, 1 from return below, 1 from implicit deref below
+				return p;                                  // unreported effort: 0
 			};
 			def c = (p : int<4>) -> bool {
 				b(p);
-				report_progress(8ull);                     // 2 unreported + 5 call overhead + 1 implicit deref
-				return true;                               // unreported effort: 1
+				report_progress(7ull);                     // 5 call overhead + 1 implicit deref, 1 from return below
+				return true;                               // unreported effort: 0
 			};
 			{
 				b(0);
-				report_progress(7ull);                     // 2 unreported, 5 call overhead
+				report_progress(5ull);                     // 5 call overhead
 				var ref<int<4>,f,f,plain> v0 = 2;
 				if(*v0 == b(1)) {
-					report_progress(12ull);                  // 1 from stmt above if, 2 branch overhead, 1 from deref, 2 unreported, 5 call overhead, 1 from builtin
+					report_progress(10ull);                  // 1 from stmt above if, 2 branch overhead, 1 from deref, 5 call overhead, 1 from builtin
 					var ref<int<4>,f,f,plain> v4 = 4;
 					report_progress(1ull);
 				} else {
-					report_progress(12ull);                  // 1 from stmt above if, 2 branch overhead, 1 from deref, 2 unreported, 5 call overhead, 1 from builtin
+					report_progress(10ull);                  // 1 from stmt above if, 2 branch overhead, 1 from deref, 5 call overhead, 1 from builtin
 					c(b(*v0));
-					report_progress(14ull);                  // 1 unreported, 2 unteported, 5 call overhead * 2, 1 from deref
+					report_progress(11ull);                  // 5 call overhead * 2, 1 from deref
 				}
 			})");
 
 		TEST_PROGRESS(15, input, R"(
 			def b = (p : int<4>) -> int<4> {
 				var ref<int<4>,f,f,plain> v1 = 0;
-				return p;                                  // unreported effort: 3
+				return p;                                  // unreported effort: 3 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			def c = (p : int<4>) -> bool {
 				b(p);
-				return true;                               // unreported effort: 10
+				return true;                               // unreported effort: 10 (NOTE: originally there was a reporting call above, but that has been inlined)
 			};
 			{
 				b(0);
@@ -712,6 +738,81 @@ namespace transform {
 				} else {
 					c(b(*v0));
 					report_progress(45ull);                  // 9 from stmts above if, 2 branch overhead, 1 from deref, 3 unreported, 5 call overhead, 1 from builtin, 3 unreported, 10 unteported, 5 call overhead * 2, 1 from deref
+				}
+			})");
+	}
+
+	TEST(ExitPoints, Simple) {
+		const auto input = R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				if(p == 0) {                              // effort 1 builtin + 1 implicit deref
+					return 0;
+				}
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				return true;                              // effort 1
+			};
+			{
+				var ref<int<4>,f,f,plain> v1 = 1;         // iterator variable
+				while(c(*v1)) {
+					b(*v1);
+					if(*v1 == 1) {
+						continue;
+					}
+					if(*v1 == 2) {
+						break;
+					}
+					if(*v1 == 3) {
+						return;
+					}
+					gen_post_inc(v1);
+				}
+			})";
+
+		TEST_PROGRESS(50, input, R"(
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				if(p==0) {
+					report_progress(6ull);                  // 1 from stmt above if, 2 branch overhead, 1 from implicit deref, 1 from builtin, 1 from return below
+					return 0;                               // unreported effort: 0
+				} else {
+					report_progress(5ull);                  // 1 from stmt above if, 2 branch overhead, 1 from implicit deref, 1 from builtin
+				}
+				report_progress(2ull);                    // 1 from implicit deref + 1 from return below
+				return p;                                 // unreported effort: 0
+			};
+			def c = (p : int<4>) -> bool {
+				b(p);
+				return true;                              // unreported effort: 7 (NOTE: originally there was a reporting call above, but that has been inlined)
+			};
+			{
+				var ref<int<4>,f,f,plain> p = 1;
+				report_progress(1ull);
+				while(c(*p)) {
+					b(*p);
+					if(*p==1) {
+						report_progress(26ull);               // 7 unreported, 5 call overhead, 1 from deref, 2 branch overhead, 5 call overhead, 1 from deref, 2 branch overhead, 1 from builtin, 1 from deref, 1 from continue below
+						continue;
+					} else {
+						report_progress(25ull);               // 7 unreported, 5 call overhead, 1 from deref, 2 branch overhead, 5 call overhead, 1 from deref, 2 branch overhead, 1 from builtin, 1 from deref
+					}
+					if(*p==2) {
+						report_progress(5ull);                // 2 branch overhead, 1 from builtin, 1 from deref, 1 from break below
+						break;
+					} else {
+						report_progress(4ull);                // 2 branch overhead, 1 from builtin, 1 from deref
+					}
+					if(*p==3) {
+						report_progress(5ull);                // 2 branch overhead, 1 from builtin, 1 from deref, 1 from return below
+						return unit;
+					} else {
+						report_progress(4ull);                // 2 branch overhead, 1 from builtin, 1 from deref
+					}
+					gen_post_inc(p);
+					report_progress(2ull);                  // 1 builtin, 1 implicit deref
 				}
 			})");
 	}
