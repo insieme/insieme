@@ -47,27 +47,25 @@
 namespace insieme {
 namespace transform {
 
-	using EffortType = analysis::features::EffortEstimationType;
-
 	namespace {
 
-		EffortType EFFORT_SIMPLE_OP = 1;
-		EffortType EFFORT_BRANCH = 2;
-		EffortType EFFORT_BUILTIN = 1;
-		EffortType EFFORT_FUN_CALL = 5;
-		EffortType EFFORT_FOR_LOOP_ITERATOR = 1;
-		EffortType EFFORT_FOR_LOOP_CONDITION = 1;
-		EffortType EFFORT_FOR_LOOP_ITERATOR_UPDATE = 1;
+		ProgressReportingType EFFORT_SIMPLE_OP = 1;
+		ProgressReportingType EFFORT_BRANCH = 2;
+		ProgressReportingType EFFORT_BUILTIN = 1;
+		ProgressReportingType EFFORT_FUN_CALL = 5;
+		ProgressReportingType EFFORT_FOR_LOOP_ITERATOR = 1;
+		ProgressReportingType EFFORT_FOR_LOOP_CONDITION = 1;
+		ProgressReportingType EFFORT_FOR_LOOP_ITERATOR_UPDATE = 1;
 
 		struct UnreportedProgressAnnotation : public core::value_annotation::copy_on_migration {
-			EffortType progress;
-			UnreportedProgressAnnotation(const EffortType& progress) : progress(progress) {}
+			ProgressReportingType progress;
+			UnreportedProgressAnnotation(const ProgressReportingType& progress) : progress(progress) {}
 			bool operator==(const UnreportedProgressAnnotation& other) const {
 				return progress == other.progress;
 			}
 		};
 
-		EffortType getNodeEffort(const core::NodePtr& node) {
+		ProgressReportingType getNodeEffort(const core::NodePtr& node) {
 			// get cached value from annotation if present
 			if(node.hasAttachedValue<UnreportedProgressAnnotation>()) {
 				return node.getAttachedValue<UnreportedProgressAnnotation>().progress;
@@ -98,8 +96,8 @@ namespace transform {
 			}
 		}
 
-		EffortType getUnreportedProgress(const core::NodePtr& parent) {
-			EffortType progress = 0;
+		ProgressReportingType getUnreportedProgress(const core::NodePtr& parent) {
+			ProgressReportingType progress = 0;
 
 			core::visitDepthFirstPrunable(parent, [&](const core::NodePtr& node) {
 				// don't process or descend into types
@@ -120,7 +118,7 @@ namespace transform {
 			return progress;
 		}
 
-		core::CompoundStmtPtr handleCompound(EffortType& progress, const core::CompoundStmtPtr& compound, const EffortType progressReportingLimit, bool isRoot) {
+		core::CompoundStmtPtr handleCompound(ProgressReportingType& progress, const core::CompoundStmtPtr& compound, const ProgressReportingType progressReportingLimit, bool isRoot) {
 			core::NodeManager& mgr = compound.getNodeManager();
 			core::IRBuilder builder(mgr);
 			core::StatementList stmts(compound.getStatements());
@@ -153,7 +151,7 @@ namespace transform {
 					progress += EFFORT_FOR_LOOP_ITERATOR;
 					insertProgressReportingCall(it);
 					// now we handle the body. Each iteration gets a start progress offset which accounts for evaluating the condition as well as updating the iterator
-					EffortType bodyProgress = EFFORT_BRANCH + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_ITERATOR_UPDATE;
+					ProgressReportingType bodyProgress = EFFORT_BRANCH + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_ITERATOR_UPDATE;
 					const auto newBody = handleCompound(bodyProgress, forLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::ForStmtAddress(forLoop)->getBody(), newBody).as<core::ForStmtPtr>();
 
@@ -162,7 +160,7 @@ namespace transform {
 					// we have to report the current progress before entering the while loop
 					insertProgressReportingCall(it);
 					// now we handle the body. Each iteration gets a start progress offset which accounts the unreported progress of the condition + some branching overhead
-					EffortType bodyProgress = EFFORT_BRANCH + getUnreportedProgress(whileLoop->getCondition());
+					ProgressReportingType bodyProgress = EFFORT_BRANCH + getUnreportedProgress(whileLoop->getCondition());
 					const auto newBody = handleCompound(bodyProgress, whileLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::WhileStmtAddress(whileLoop)->getBody(), newBody).as<core::WhileStmtPtr>();
 
@@ -171,7 +169,7 @@ namespace transform {
 					// acount for the branching overhead and the unreported progress of the condition
 					progress += EFFORT_BRANCH + getUnreportedProgress(ifStmt->getCondition());
 					// now handle both branches with a start offset of the progress we have at the moment
-					EffortType bodyProgress = progress;
+					ProgressReportingType bodyProgress = progress;
 					core::NodeMap replacements;
 					replacements[core::IfStmtAddress(ifStmt)->getThenBody()] = handleCompound(bodyProgress, ifStmt->getThenBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
 					bodyProgress = progress;
@@ -209,7 +207,7 @@ namespace transform {
 			return builder.compoundStmt(stmts);
 		}
 
-		core::CompoundStmtPtr inlineSmallLambdaBodies(EffortType& progress, const core::CompoundStmtPtr& compound, const EffortType progressReportingLimit) {
+		core::CompoundStmtPtr inlineSmallLambdaBodies(ProgressReportingType& progress, const core::CompoundStmtPtr& compound, const ProgressReportingType progressReportingLimit) {
 			auto& mgr = compound.getNodeManager();
 			const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
 			// only proceed if we could at least have a reporting call and a return stmt
@@ -233,11 +231,11 @@ namespace transform {
 			return compound;
 		}
 
-		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const EffortType progressReportingLimit) {
+		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const ProgressReportingType progressReportingLimit) {
 			// first we transform all the lambdas bottom to top. We add reporting calls and annotate the unreported progress to them
 			auto res = core::transform::transformBottomUp(node, [&](const core::LambdaExprPtr& lambda) {
 				auto res = lambda;
-				EffortType progress = 0;
+				ProgressReportingType progress = 0;
 
 				// we do not modify derived lambdas
 				if(core::lang::isDerived(lambda)) {
@@ -258,7 +256,7 @@ namespace transform {
 
 			// this is to ensure that if we are handling a compound only (mostly for testing), we also report the progress at it's end
 			if(res.getNodeType() == core::NT_CompoundStmt) {
-				EffortType progress = 0;
+				ProgressReportingType progress = 0;
 				return handleCompound(progress, res.as<core::CompoundStmtPtr>(), progressReportingLimit, true);
 			}
 
@@ -267,20 +265,20 @@ namespace transform {
 	}
 
 
-	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const EffortType progress) {
+	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const ProgressReportingType progress) {
 		core::IRBuilder builder(manager);
 		const auto& ext = manager.getLangExtension<ProgressEstomationExtension>();
 		return builder.callExpr(ext.getProgressReportingLiteral(), builder.literal(builder.getLangBasic().getUInt16(), toString(progress)));
 	}
 
-	analysis::features::EffortEstimationType getReportedProgress(const core::NodePtr& node) {
+	ProgressReportingType getReportedProgress(const core::NodePtr& node) {
 		const auto& ext = node.getNodeManager().getLangExtension<ProgressEstomationExtension>();
 		if(!ext.isCallOfProgressReportingLiteral(node)) return 0;
 		auto uintValue = core::analysis::getArgument(node, 0).as<core::LiteralPtr>();
 		return std::stoull(uintValue->getValue()->getValue());
 	}
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const EffortType progressReportingLimit) {
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const ProgressReportingType progressReportingLimit) {
 		return applyProgressEstimationImpl(node, progressReportingLimit);
 	}
 

@@ -37,13 +37,14 @@
 
 #pragma once
 
-#include "insieme/analysis/features/effort_estimation.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/extension.h"
 
 
 namespace insieme {
 namespace transform {
+
+	using ProgressReportingType = unsigned long long;
 
 	class ProgressEstomationExtension : public core::lang::Extension {
 		// Allow the node manager to create instances of this class.
@@ -56,11 +57,11 @@ namespace transform {
 		LANG_EXT_LITERAL(ProgressReportingLiteral, "report_progress", "(uint<16>) -> unit");
 	};
 
-	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const analysis::features::EffortEstimationType progress);
+	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const ProgressReportingType progress);
 
-	analysis::features::EffortEstimationType getReportedProgress(const core::NodePtr& node);
+	ProgressReportingType getReportedProgress(const core::NodePtr& node);
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const analysis::features::EffortEstimationType progressReportingLimit);
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const ProgressReportingType progressReportingLimit);
 
 } // end namespace transform
 } // end namespace insieme
