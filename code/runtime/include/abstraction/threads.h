@@ -69,7 +69,12 @@ typedef uint32 irt_tls_key;
 typedef pthread_t irt_thread;
 typedef pthread_cond_t irt_cond_var;
 typedef pthread_mutex_t irt_mutex_obj;
-typedef pthread_key_t irt_tls_key;
+
+	#ifdef _Thread_local
+		#define IRT_THREAD_LOCAL _Thread_local
+	#else
+		#define IRT_THREAD_LOCAL __thread
+	#endif
 #endif
 
 typedef struct _irt_cond_bundle {
@@ -145,20 +150,6 @@ inline int irt_cond_bundle_wait(irt_cond_bundle*);
 
 /** destroys the condition variable and associated mutex */
 inline void irt_cond_bundle_destroy(irt_cond_bundle*);
-
-/* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
-
-/** creates a new thread local storage key at location k */
-inline int irt_tls_key_create(irt_tls_key* k);
-
-/** delete key k, if value is pointer to memory location, caller is responsible for freeing it */
-inline void irt_tls_key_delete(irt_tls_key k);
-
-/** get the thread local value for key k */
-inline void* irt_tls_get(irt_tls_key k);
-
-/** set the thread local value for key k */
-inline int irt_tls_set(irt_tls_key k, void* val);
 
 
 #endif // ifndef __GUARD_ABSTRACTION_THREADS_H

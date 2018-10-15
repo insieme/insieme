@@ -146,23 +146,5 @@ void irt_cond_wake_one(irt_cond_var* cv) {
 	pthread_cond_signal(cv);
 }
 
-/* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
-
-int irt_tls_key_create(irt_tls_key* k) {
-	return pthread_key_create(k, NULL);
-}
-
-void irt_tls_key_delete(irt_tls_key k) {
-	pthread_key_delete(k);
-}
-
-void* irt_tls_get(irt_tls_key k) {
-	return pthread_getspecific(k);
-}
-
-int irt_tls_set(irt_tls_key k, void* val) {
-	return pthread_setspecific(k, val);
-}
-
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_UNIX_IMPL_H

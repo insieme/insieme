@@ -103,12 +103,6 @@ void irt_init_globals() {
 	irt_maintenance_init();
 	#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
-	// not using IRT_ASSERT since environment is not yet set up
-	int err_flag = irt_tls_key_create(&irt_g_worker_key);
-	if(err_flag != 0) {
-		fprintf(stderr, "Could not create thread local storage key. Aborting.\n");
-		exit(-1);
-	}
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
 	irt_mutex_init(&irt_g_degree_of_parallelism_mutex);
@@ -139,7 +133,6 @@ void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) { irt_mqueue_cleanup(); }
 	#endif
 	irt_mutex_destroy(&irt_g_error_mutex);
-	irt_tls_key_delete(irt_g_worker_key);
 	irt_log_cleanup();
 	irt_hwloc_cleanup();
 	irt_g_globals_initialization_done = false;
@@ -350,7 +343,7 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	irt_init_globals();
 	irt_worker tempw;
 	tempw.generator_id = 0;
-	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
+	irt_g_t_current_worker = &tempw; // slightly hacky
 
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
@@ -359,7 +352,7 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	tempw.cur_context = context->id;
 
 	irt_context_initialize(context);
-	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
+	irt_g_t_current_worker = irt_g_workers[0]; // slightly hacky
 
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;

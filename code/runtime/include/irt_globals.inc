@@ -41,13 +41,16 @@
 
 __EXTERN irt_mutex_obj irt_g_error_mutex;
 
-__EXTERN irt_tls_key irt_g_worker_key;
+struct _irt_worker;
+#ifndef IRT_THREAD_LOCAL
+	#error IRT_THREAD_LOCAL not defined
+#endif // ifndef IRT_THREAD_LOCAL
+__EXTERN IRT_THREAD_LOCAL struct _irt_worker* irt_g_t_current_worker;
 __EXTERN uint32 irt_g_worker_count;
 __EXTERN volatile uint32 irt_g_degree_of_parallelism;
 __EXTERN irt_mutex_obj irt_g_degree_of_parallelism_mutex;
 __EXTERN uint32 irt_g_active_worker_count;
 __EXTERN irt_mutex_obj irt_g_active_worker_mutex;
-struct _irt_worker;
 __EXTERN struct _irt_worker** irt_g_workers;
 
 __EXTERN bool irt_g_rt_is_initialized;

@@ -228,25 +228,4 @@ void irt_mutex_destroy(irt_mutex_obj* m) {
 
 #endif
 
-
-/* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
-
-int irt_tls_key_create(irt_tls_key* k) {
-	*k = TlsAlloc();
-	if(*k == TLS_OUT_OF_INDEXES) { return -1; }
-	return 0;
-}
-
-void irt_tls_key_delete(irt_tls_key k) {
-	TlsFree(k);
-}
-
-void* irt_tls_get(irt_tls_key k) {
-	return TlsGetValue(k);
-}
-
-int irt_tls_set(irt_tls_key k, void* val) {
-	return !TlsSetValue(k, val);
-}
-
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_THREADS_WIN_IMPL_H
