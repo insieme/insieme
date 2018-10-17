@@ -99,7 +99,7 @@ void irt_init_globals() {
 	irt_time_ticks_per_sec_calibration_mark();
 
 	_irt_hw_info_init();
-	#if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
+	#if defined IRT_ENABLE_PROGRESS_REPORTING || (defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS)
 	irt_maintenance_init();
 	#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
@@ -178,7 +178,7 @@ void irt_exit_handler() {
 
 	_irt_hw_info_shutdown();
 
-	#if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
+	#if defined IRT_ENABLE_PROGRESS_REPORTING || (defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS)
 	irt_maintenance_cleanup();
 	#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
@@ -311,6 +311,34 @@ bool _irt_runtime_standalone_end_func(void* condbundlep) {
 	return false;
 }
 
+#ifdef IRT_ENABLE_PROGRESS_REPORTING
+uint64* last_progress;
+
+uint64 print_progress(void* data) {
+	uint64 start_time = *((uint64*) data);
+	uint64 current_time = irt_time_ms();
+	fprintf(stderr, "%" PRIu64 " ", current_time - start_time);
+
+	// print progress individually for each worker
+	for(int i = 0; i < irt_g_worker_count; ++i) {
+		fprintf(stderr, "%" PRIu64 " ", irt_worker_get_progress(irt_g_workers[i]));
+	}
+
+//	// print maximum progress increment for each worker
+//	uint64 max_diff = 0;
+//	for(int i = 0; i < irt_g_worker_count; ++i) {
+//		uint64 new_value = irt_worker_get_progress(irt_g_workers[i]);
+//		uint64 current_diff = new_value - last_progress[i];
+//		last_progress[i] = new_value;
+//		max_diff = MAX(max_diff, current_diff);
+//	}
+//	fprintf(stderr, "%" PRIu64, max_diff);
+
+	fprintf(stderr, "\n");
+	return 128;
+}
+#endif // IRT_ENABLE_PROGRESS_REPORTING
+
 void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item* params) {
 	irt_work_item* main_wi = _irt_wi_create(irt_g_workers[0], &irt_g_wi_range_one_elem, impl, params);
 	// create work group for outermost wi
@@ -327,6 +355,13 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item* params) {
 	irt_wi_event_handler_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
+
+	#ifdef IRT_ENABLE_PROGRESS_REPORTING
+	last_progress = calloc(irt_g_worker_count, sizeof(uint64));
+	uint64 start_time = irt_time_ms();
+	irt_maintenance_lambda ml = {print_progress, &start_time, 128, NULL};
+	irt_maintenance_register(&ml);
+	#endif // IRT_ENABLE_PROGRESS_REPORTING
 
 	// wait for workers to finish the main work-item
 	irt_cond_bundle_wait(&condbundle);

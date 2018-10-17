@@ -422,4 +422,22 @@ void irt_worker_cleanup(irt_worker* self) {
 }
 
 
+#ifdef IRT_ENABLE_PROGRESS_REPORTING
+inline void irt_report_progress(uint64 progress) {
+	irt_worker* self = irt_worker_get_current();
+	self->reported_progress += progress;
+	self->reported_progress_replicate += progress;
+}
+
+inline uint64 irt_worker_get_progress(irt_worker* self) {
+	// we read the value as well as it's replicate and if both are equal, we had a valid read and can return the value
+	while(true) {
+		uint64 value = self->reported_progress;
+		if(value == self->reported_progress_replicate) {
+			return value;
+		}
+	}
+}
+#endif // IRT_ENABLE_PROGRESS_REPORTING
+
 #endif // ifndef __GUARD_IMPL_WORKER_IMPL_H

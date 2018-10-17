@@ -125,4 +125,9 @@ static inline uint32 irt_variant_pick(uint32 begin, uint32 end) {
 	return begin;
 }
 
+#ifdef IRT_ENABLE_PROGRESS_REPORTING
+// report some progress within a worker
+inline void irt_report_progress(uint64 progress);
+#endif // IRT_ENABLE_PROGRESS_REPORTING
+
 #endif // ifndef __GUARD_IR_INTERFACE_H
