@@ -52,10 +52,17 @@ namespace addons {
 		const auto& ext = converter.getNodeManager().getLangExtension<transform::ProgressEstimationExtension>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
+
 		converter.getFunctionManager().getOperatorConverterTable()[ext.getProgressReportingLiteral()] = OP_CONVERTER {
 			ADD_HEADER("ir_interface.h"); // for 'irt_report_progress'
 			return c_ast::call(C_NODE_MANAGER->create("irt_report_progress"), CONVERT_ARG(0));
 		};
+
+		converter.getFunctionManager().getOperatorConverterTable()[ext.getProgressReportingThreadLiteral()] = OP_CONVERTER {
+			ADD_HEADER("ir_interface.h"); // for 'irt_report_progress_thread'
+			return c_ast::call(C_NODE_MANAGER->create("irt_report_progress_thread"), CONVERT_ARG(0));
+		};
+
 		#include "insieme/backend/operator_converter_end.inc"
 	}
 

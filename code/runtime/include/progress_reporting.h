@@ -61,9 +61,16 @@ typedef struct irt_progress_reporting_data {
 	uint64* last_progress;
 } irt_progress_reporting_data;
 
+// report some global progress
+static inline uint64 irt_report_progress(uint64 progress) {
+	static uint64 global_progress = 0;
+	uint64 new_progress = atomic_load_explicit(&global_progress, memory_order_relaxed) + progress;
+	atomic_store_explicit(&global_progress, new_progress, memory_order_relaxed);
+	return new_progress;
+}
 
-// the reporting function called by the user program
-static inline void irt_report_progress(uint64 progress) {
+// report some progress within a worker
+static inline void irt_report_progress_thread(uint64 progress) {
 	irt_worker* self = irt_worker_get_current();
 	uint64 current_progress = atomic_load_explicit(&self->reported_progress, memory_order_relaxed);
 	atomic_store_explicit(&self->reported_progress, current_progress + progress, memory_order_relaxed);
@@ -80,8 +87,9 @@ uint64 _irt_progress_reporting_print_progress_callback(void* data) {
 	fprintf(stderr, "%" PRIu64 " ", current_time - reporting_data->start_time);
 
 	// print progress individually for each worker
+	uint64 global_progress = irt_report_progress(0);
 	for(int i = 0; i < irt_g_worker_count; ++i) {
-		fprintf(stderr, "%" PRIu64 " ", irt_progress_reporting_get_worker_progress(irt_g_workers[i]));
+		fprintf(stderr, "%" PRIu64 " ", irt_progress_reporting_get_worker_progress(irt_g_workers[i]) + global_progress);
 	}
 
 //	// print maximum progress increment for each worker
