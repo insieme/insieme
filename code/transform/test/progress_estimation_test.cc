@@ -55,14 +55,18 @@ namespace transform {
 		core::IRBuilder builder(mgr);
 		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
 
-		const auto& lit = ext.getProgressReportingLiteral();
-		ASSERT_TRUE(lit);
+		auto checkType = [&](const core::LiteralPtr& lit) {
+			ASSERT_TRUE(lit);
 
-		const auto& funType = lit->getType().isa<core::FunctionTypePtr>();
-		ASSERT_TRUE(funType);
+			const auto& funType = lit->getType().isa<core::FunctionTypePtr>();
+			ASSERT_TRUE(funType);
 
-		const auto desiredType = builder.parseType("(uint<16>) -> unit");
-		EXPECT_EQ(desiredType, funType);
+			const auto desiredType = builder.parseType("(uint<16>) -> unit");
+			EXPECT_EQ(desiredType, funType);
+		};
+
+		checkType(ext.getProgressReportingLiteral());
+		checkType(ext.getProgressReportingThreadLiteral());
 	}
 
 	TEST(IrExtension, Builder) {
@@ -70,29 +74,61 @@ namespace transform {
 		core::IRBuilder builder(mgr);
 		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
 
-		const auto call = buildProgressReportingCall(mgr, 0);
-		assert_correct_ir(call);
+		{
+			const auto call = buildProgressReportingCall(mgr, 0);
+			assert_correct_ir(call);
 
-		ASSERT_TRUE(ext.isCallOfProgressReportingLiteral(call));
-		const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
-		const auto desiredType = builder.parseType("(uint<16>) -> unit");
-		ASSERT_EQ(desiredType, funType);
+			ASSERT_TRUE(ext.isCallOfProgressReportingLiteral(call));
+			const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
+			const auto desiredType = builder.parseType("(uint<16>) -> unit");
+			ASSERT_EQ(desiredType, funType);
 
-		const auto& arg = core::analysis::getArgument(call, 0);
-		EXPECT_EQ(builder.getLangBasic().getUInt16(), arg->getType());
+			const auto& arg = core::analysis::getArgument(call, 0);
+			EXPECT_EQ(builder.getLangBasic().getUInt16(), arg->getType());
+		}
+
+		{
+			const auto call = buildProgressReportingThreadCall(mgr, 0);
+			assert_correct_ir(call);
+
+			ASSERT_TRUE(ext.isCallOfProgressReportingThreadLiteral(call));
+			const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
+			const auto desiredType = builder.parseType("(uint<16>) -> unit");
+			ASSERT_EQ(desiredType, funType);
+
+			const auto& arg = core::analysis::getArgument(call, 0);
+			EXPECT_EQ(builder.getLangBasic().getUInt16(), arg->getType());
+		}
 	}
 
 	TEST(IrExtension, Extractor) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
-		const auto call0 = buildProgressReportingCall(mgr, 0);
-		EXPECT_EQ(0, getReportedProgress(call0));
 
-		const auto call1 = buildProgressReportingCall(mgr, 42);
-		EXPECT_EQ(42, getReportedProgress(call1));
+		const auto negativeCall = builder.negateExpr(builder.getLangBasic().getTrue());
+		EXPECT_EQ(0, getReportedProgress(negativeCall));
 
-		const auto call2 = buildProgressReportingCall(mgr, 9876543210ull);
-		EXPECT_EQ(9876543210ull, getReportedProgress(call2));
+		{
+			const auto call0 = buildProgressReportingCall(mgr, 0);
+			EXPECT_EQ(0, getReportedProgress(call0));
+
+			const auto call1 = buildProgressReportingCall(mgr, 42);
+			EXPECT_EQ(42, getReportedProgress(call1));
+
+			const auto call2 = buildProgressReportingCall(mgr, 9876543210ull);
+			EXPECT_EQ(9876543210ull, getReportedProgress(call2));
+		}
+
+		{
+			const auto call0 = buildProgressReportingThreadCall(mgr, 0);
+			EXPECT_EQ(0, getReportedProgress(call0));
+
+			const auto call1 = buildProgressReportingThreadCall(mgr, 42);
+			EXPECT_EQ(42, getReportedProgress(call1));
+
+			const auto call2 = buildProgressReportingThreadCall(mgr, 9876543210ull);
+			EXPECT_EQ(9876543210ull, getReportedProgress(call2));
+		}
 	}
 
 

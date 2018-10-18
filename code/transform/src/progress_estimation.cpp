@@ -262,18 +262,25 @@ namespace transform {
 
 			return res;
 		}
+
+		core::CallExprPtr buildReportingCall(core::NodeManager& manager, const core::LiteralPtr& literal, const ProgressReportingType progress) {
+			core::IRBuilder builder(manager);
+			return builder.callExpr(literal, builder.literal(builder.getLangBasic().getUInt16(), toString(progress)));
+		}
 	}
 
 
 	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const ProgressReportingType progress) {
-		core::IRBuilder builder(manager);
-		const auto& ext = manager.getLangExtension<ProgressEstomationExtension>();
-		return builder.callExpr(ext.getProgressReportingLiteral(), builder.literal(builder.getLangBasic().getUInt16(), toString(progress)));
+		return buildReportingCall(manager, manager.getLangExtension<ProgressEstomationExtension>().getProgressReportingLiteral(), progress);
+	}
+
+	core::CallExprPtr buildProgressReportingThreadCall(core::NodeManager& manager, const ProgressReportingType progress) {
+		return buildReportingCall(manager, manager.getLangExtension<ProgressEstomationExtension>().getProgressReportingThreadLiteral(), progress);
 	}
 
 	ProgressReportingType getReportedProgress(const core::NodePtr& node) {
 		const auto& ext = node.getNodeManager().getLangExtension<ProgressEstomationExtension>();
-		if(!ext.isCallOfProgressReportingLiteral(node)) return 0;
+		if(!ext.isCallOfProgressReportingLiteral(node) && !ext.isCallOfProgressReportingThreadLiteral(node)) return 0;
 		auto uintValue = core::analysis::getArgument(node, 0).as<core::LiteralPtr>();
 		return std::stoull(uintValue->getValue()->getValue());
 	}
