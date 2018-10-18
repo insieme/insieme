@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <stdatomic.h>
 
 #include "irt_globals.h"
 #include "irt_maintenance.h"
@@ -64,18 +65,12 @@ typedef struct irt_progress_reporting_data {
 // the reporting function called by the user program
 static inline void irt_report_progress(uint64 progress) {
 	irt_worker* self = irt_worker_get_current();
-	self->reported_progress += progress;
-	self->reported_progress_replicate += progress;
+	uint64 current_progress = atomic_load_explicit(&self->reported_progress, memory_order_relaxed);
+	atomic_store_explicit(&self->reported_progress, current_progress + progress, memory_order_relaxed);
 }
 
 uint64 irt_progress_reporting_get_worker_progress(irt_worker* worker) {
-	// we read the value as well as it's replicate and if both are equal, we had a valid read and can return the value
-	while(true) {
-		uint64 value = worker->reported_progress;
-		if(value == worker->reported_progress_replicate) {
-			return value;
-		}
-	}
+	return atomic_load_explicit(&worker->reported_progress, memory_order_relaxed);
 }
 
 uint64 _irt_progress_reporting_print_progress_callback(void* data) {

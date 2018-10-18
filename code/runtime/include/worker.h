@@ -39,6 +39,8 @@
 #ifndef __GUARD_WORKER_H
 #define __GUARD_WORKER_H
 
+#include <stdatomic.h>
+
 #include "declarations.h"
 #include "abstraction/threads.h"
 #include "abstraction/spin_locks.h"
@@ -106,13 +108,8 @@ struct _irt_worker {
 	#endif
 
 	#ifdef IRT_ENABLE_PROGRESS_REPORTING
-	// For the best performance of progress reporting, we use "optimistic locking" here.
-	// As we often write the (8-byte long) progress and only rarely read it, we want the writing to be cheap. Using atomics is way too expensive for this purpose.
-	// Our solution is to write the value twice in the worker threads (which should be cheap, as the worker struct will reside in the cache most of the time).
-	// To read out the value, we have to read out both variables repeatedly until they are equal. This signifies a valid read.
-	volatile uint64 reported_progress;
-	volatile uint64 reported_progress_replicate;
-	#endif
+	_Atomic uint64 reported_progress;
+	#endif // IRT_ENABLE_PROGRESS_REPORTING
 
 	// memory reuse stuff
 	irt_wi_event_register* wi_ev_register_list;
