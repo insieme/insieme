@@ -153,9 +153,4 @@ void _irt_worker_print_debug_info(irt_worker* self);
 #endif
 
 
-#ifdef IRT_ENABLE_PROGRESS_REPORTING
-static inline void irt_report_progress(uint64 progress);
-inline uint64 irt_worker_get_progress(irt_worker* self);
-#endif // IRT_ENABLE_PROGRESS_REPORTING
-
 #endif // ifndef __GUARD_WORKER_H
