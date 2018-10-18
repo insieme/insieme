@@ -138,7 +138,8 @@ namespace transform {
 		core::IRBuilder builder(mgr);                                                                        \
 		const auto _input = builder.normalize(builder.parseStmt(INPUT_IR));                                  \
 		assert_correct_ir(_input);                                                                           \
-		const auto _finalDesiredIr = std::string("decl report_progress : (uint<16>) -> unit;") + DESIRED_IR; \
+		auto _finalDesiredIr = std::string("decl report_progress : (uint<16>) -> unit;") + DESIRED_IR;       \
+		_finalDesiredIr = "decl report_progress_thread : (uint<16>) -> unit;" + _finalDesiredIr;             \
 		const auto _desiredOutput = builder.normalize(builder.parseStmt(_finalDesiredIr));                   \
 		assert_correct_ir(_desiredOutput);                                                                   \
 		const auto _withProgressEstimation = applyProgressEstimation(_input, REPORTING_LIMIT);               \
@@ -443,6 +444,64 @@ namespace transform {
 				report_progress(30ull);                   // (2 unreported + 3 unreported) * 2 + (5 call overhead) * 4
 				d();
 				report_progress(7ull);                    // 2 unreported + 5 call overhead
+			})");
+	}
+
+	TEST(SimpleTests, PerThread) {
+		const auto input = R"(
+			def a = (p : int<4>) -> int<4> {
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def c = (p : int<4>) -> int<4> {
+				a(p);
+				b(p);
+				return p;                                 // effort 1 + 1 implicit deref
+			};
+			def d = () -> unit {
+				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
+				var ref<int<4>,f,f,plain> v2 = 1;         // effort 1
+			};
+			def parFun = function () -> unit {
+				b(4);
+				b(5);
+				a(a(a(6)));
+				merge_all();
+			};
+			{
+				a(0);
+				b(1);
+				merge(parallel( job[1ul...] => parFun() ));
+			})";
+
+		// The important part here is not the reported numbers, but the fact that the efforts are reported per-thread inside the function called by parallel
+
+		TEST_PROGRESS(15, input, R"(
+			def a = (p : int<4>) -> int<4> {
+				return p;
+			};
+			def b = (p : int<4>) -> int<4> {
+				var ref<int<4>,f,f,plain> v1 = 0;
+				return p;
+			};
+			def parFun = () -> unit {
+				b(4);
+				report_progress_thread(8ull);
+				b(5);
+				report_progress_thread(8ull);
+				a(a(a(6)));
+				report_progress_thread(21ull);
+				merge_all();
+			};
+			{
+				a(0);
+				b(1);
+				report_progress(15ull);
+				merge(parallel(job[1ul...] => parFun()));
+				report_progress(9ull);
 			})");
 	}
 

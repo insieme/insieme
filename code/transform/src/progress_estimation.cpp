@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/lang/parallel.h"
 #include "insieme/core/transform/node_replacer.h"
 
 
@@ -126,7 +127,7 @@ namespace transform {
 			// if the current progress is 0, we insert a new statement into the list and update the iterator
 			auto insertProgressReportingCall = [&](core::StatementList::iterator& it) {
 				if(progress != 0) {
-					it = stmts.insert(it, buildProgressReportingCall(mgr, progress));
+					it = stmts.insert(it, buildProgressReportingThreadCall(mgr, progress));
 					++it;
 					progress = 0;
 				}
@@ -201,7 +202,7 @@ namespace transform {
 
 			// if we do have some unreported progress left and this is the root compound, we report it here
 			if(isRoot && progress != 0) {
-				stmts.push_back(buildProgressReportingCall(mgr, progress));
+				stmts.push_back(buildProgressReportingThreadCall(mgr, progress));
 			}
 
 			return builder.compoundStmt(stmts);
@@ -213,10 +214,10 @@ namespace transform {
 			// only proceed if we could at least have a reporting call and a return stmt
 			if(compound.size() >= 2) {
 				// if we only have one reporting call
-				if(core::analysis::countInstances(compound, ext.getProgressReportingLiteral(), true) == 1) {
+				if(core::analysis::countInstances(compound, ext.getProgressReportingThreadLiteral(), true) == 1) {
 					const auto& reportingCall = *(compound.end() - 2);
 					// if that is the penultimate stmt and the last one is a return
-					if(ext.isCallOfProgressReportingLiteral(reportingCall) && (*(compound.end() - 1)).isa<core::ReturnStmtPtr>()) {
+					if(ext.isCallOfProgressReportingThreadLiteral(reportingCall) && (*(compound.end() - 1)).isa<core::ReturnStmtPtr>()) {
 						const auto reportedProgress = getReportedProgress(reportingCall);
 						// and the reported progress is below the reporting limit, we inline this progress (i.e. remove the reporting call and increase the unreported effort)
 						if(reportedProgress < progressReportingLimit) {
@@ -257,8 +258,18 @@ namespace transform {
 			// this is to ensure that if we are handling a compound only (mostly for testing), we also report the progress at it's end
 			if(res.getNodeType() == core::NT_CompoundStmt) {
 				ProgressReportingType progress = 0;
-				return handleCompound(progress, res.as<core::CompoundStmtPtr>(), progressReportingLimit, true);
+				res = handleCompound(progress, res.as<core::CompoundStmtPtr>(), progressReportingLimit, true);
 			}
+
+			// Our transformation generated just per-thread reporting calls.
+			// Now we transform the code so that all the reporting outside parallel regions is changed to non-thread-local reportings
+			auto& mgr = res.getNodeManager();
+			const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
+			const auto& parallelExt= mgr.getLangExtension<core::lang::ParallelExtension>();
+			res = core::transform::replaceAllGen(mgr, res, ext.getProgressReportingThreadLiteral(), ext.getProgressReportingLiteral(),
+			                                     [&parallelExt](const core::NodePtr& node) {
+				return parallelExt.isCallOfParallel(node) ? core::transform::ReplaceAction::Prune : core::transform::ReplaceAction::Process;
+			});
 
 			return res;
 		}
