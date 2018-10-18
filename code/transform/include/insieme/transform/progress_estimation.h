@@ -46,12 +46,12 @@ namespace transform {
 
 	using ProgressReportingType = unsigned long long;
 
-	class ProgressEstomationExtension : public core::lang::Extension {
+	class ProgressEstimationExtension : public core::lang::Extension {
 		// Allow the node manager to create instances of this class.
 		friend class core::NodeManager;
 
 		// Creates a new instance based on the given node manager.
-		ProgressEstomationExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+		ProgressEstimationExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
 		LANG_EXT_LITERAL(ProgressReportingLiteral, "report_progress", "(uint<16>) -> unit");

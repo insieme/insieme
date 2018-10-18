@@ -53,7 +53,7 @@ namespace transform {
 	TEST(IrExtension, Basic) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
-		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
+		const auto& ext = mgr.getLangExtension<ProgressEstimationExtension>();
 
 		auto checkType = [&](const core::LiteralPtr& lit) {
 			ASSERT_TRUE(lit);
@@ -72,7 +72,7 @@ namespace transform {
 	TEST(IrExtension, Builder) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
-		const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
+		const auto& ext = mgr.getLangExtension<ProgressEstimationExtension>();
 
 		{
 			const auto call = buildProgressReportingCall(mgr, 0);

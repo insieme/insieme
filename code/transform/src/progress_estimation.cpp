@@ -210,7 +210,7 @@ namespace transform {
 
 		core::CompoundStmtPtr inlineSmallLambdaBodies(ProgressReportingType& progress, const core::CompoundStmtPtr& compound, const ProgressReportingType progressReportingLimit) {
 			auto& mgr = compound.getNodeManager();
-			const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
+			const auto& ext = mgr.getLangExtension<ProgressEstimationExtension>();
 			// only proceed if we could at least have a reporting call and a return stmt
 			if(compound.size() >= 2) {
 				// if we only have one reporting call
@@ -264,7 +264,7 @@ namespace transform {
 			// Our transformation generated just per-thread reporting calls.
 			// Now we transform the code so that all the reporting outside parallel regions is changed to non-thread-local reportings
 			auto& mgr = res.getNodeManager();
-			const auto& ext = mgr.getLangExtension<ProgressEstomationExtension>();
+			const auto& ext = mgr.getLangExtension<ProgressEstimationExtension>();
 			const auto& parallelExt= mgr.getLangExtension<core::lang::ParallelExtension>();
 			res = core::transform::replaceAllGen(mgr, res, ext.getProgressReportingThreadLiteral(), ext.getProgressReportingLiteral(),
 			                                     [&parallelExt](const core::NodePtr& node) {
@@ -282,15 +282,15 @@ namespace transform {
 
 
 	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const ProgressReportingType progress) {
-		return buildReportingCall(manager, manager.getLangExtension<ProgressEstomationExtension>().getProgressReportingLiteral(), progress);
+		return buildReportingCall(manager, manager.getLangExtension<ProgressEstimationExtension>().getProgressReportingLiteral(), progress);
 	}
 
 	core::CallExprPtr buildProgressReportingThreadCall(core::NodeManager& manager, const ProgressReportingType progress) {
-		return buildReportingCall(manager, manager.getLangExtension<ProgressEstomationExtension>().getProgressReportingThreadLiteral(), progress);
+		return buildReportingCall(manager, manager.getLangExtension<ProgressEstimationExtension>().getProgressReportingThreadLiteral(), progress);
 	}
 
 	ProgressReportingType getReportedProgress(const core::NodePtr& node) {
-		const auto& ext = node.getNodeManager().getLangExtension<ProgressEstomationExtension>();
+		const auto& ext = node.getNodeManager().getLangExtension<ProgressEstimationExtension>();
 		if(!ext.isCallOfProgressReportingLiteral(node) && !ext.isCallOfProgressReportingThreadLiteral(node)) return 0;
 		auto uintValue = core::analysis::getArgument(node, 0).as<core::LiteralPtr>();
 		return std::stoull(uintValue->getValue()->getValue());

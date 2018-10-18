@@ -49,7 +49,7 @@ namespace backend {
 namespace addons {
 
 	void ProgressReporting::installOn(Converter& converter) const {
-		const auto& ext = converter.getNodeManager().getLangExtension<transform::ProgressEstomationExtension>();
+		const auto& ext = converter.getNodeManager().getLangExtension<transform::ProgressEstimationExtension>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 		converter.getFunctionManager().getOperatorConverterTable()[ext.getProgressReportingLiteral()] = OP_CONVERTER {
