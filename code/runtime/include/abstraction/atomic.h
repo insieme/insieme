@@ -230,6 +230,27 @@ _IRT_DEFINE_ATOMIC_FP_OP(double, uint64, sub, -)
 #define irt_atomic_add_and_fetch_fp(__location, __value, __type) _irt_atomic_add_and_fetch_fp_##__type((__type*)__location, __value)
 #define irt_atomic_sub_and_fetch_fp(__location, __value, __type) _irt_atomic_sub_and_fetch_fp_##__type((__type*)__location, __value)
 
+
+// atomic types and load/store with relaxed semantics in C11 and C++
+#ifdef __cplusplus
+extern "C++" {
+	#include <atomic>
+
+	#define IRT_ATOMIC_TYPE(__type)                std::atomic<__type>
+	#define irt_atomic_load_relaxed(__var)         __var.load (       std::memory_order::memory_order_relaxed)
+	#define irt_atomic_store_relaxed(__var, __val) __var.store(__val, std::memory_order::memory_order_relaxed)
+}
+
+#else // __cplusplus
+	#include <stdatomic.h>
+
+	#define IRT_ATOMIC_TYPE(__type)                _Atomic __type
+	#define irt_atomic_load_relaxed(__var)         atomic_load_explicit (&__var,        memory_order_relaxed)
+	#define irt_atomic_store_relaxed(__var, __val) atomic_store_explicit(&__var, __val, memory_order_relaxed)
+
+#endif // !__cplusplus
+
+
 #else
 
 #include <Windows.h>
