@@ -39,9 +39,8 @@
 #ifndef __GUARD_WORKER_H
 #define __GUARD_WORKER_H
 
-#include <stdatomic.h>
-
 #include "declarations.h"
+#include "abstraction/atomic.h"
 #include "abstraction/threads.h"
 #include "abstraction/spin_locks.h"
 #include "work_item.h"
@@ -108,7 +107,7 @@ struct _irt_worker {
 	#endif
 
 	#ifdef IRT_ENABLE_PROGRESS_REPORTING
-	_Atomic uint64 reported_progress;
+	IRT_ATOMIC_TYPE(uint64) reported_progress;
 	#endif // IRT_ENABLE_PROGRESS_REPORTING
 
 	// memory reuse stuff

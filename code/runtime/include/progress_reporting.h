@@ -44,8 +44,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <stdatomic.h>
 
+#include "abstraction/threads.h"
 #include "irt_globals.h"
 #include "irt_maintenance.h"
 #include "utils/timing.h"
@@ -64,20 +64,20 @@ typedef struct irt_progress_reporting_data {
 // report some global progress
 static inline uint64 irt_report_progress(uint64 progress) {
 	static uint64 global_progress = 0;
-	uint64 new_progress = atomic_load_explicit(&global_progress, memory_order_relaxed) + progress;
-	atomic_store_explicit(&global_progress, new_progress, memory_order_relaxed);
+	uint64 new_progress = irt_atomic_load_relaxed(global_progress) + progress;
+	irt_atomic_store_relaxed(global_progress, new_progress);
 	return new_progress;
 }
 
 // report some progress within a worker
 static inline void irt_report_progress_thread(uint64 progress) {
 	irt_worker* self = irt_worker_get_current();
-	uint64 current_progress = atomic_load_explicit(&self->reported_progress, memory_order_relaxed);
-	atomic_store_explicit(&self->reported_progress, current_progress + progress, memory_order_relaxed);
+	uint64 new_progress = irt_atomic_load_relaxed(self->reported_progress) + progress;
+	irt_atomic_store_relaxed(self->reported_progress, new_progress);
 }
 
 uint64 irt_progress_reporting_get_worker_progress(irt_worker* worker) {
-	return atomic_load_explicit(&worker->reported_progress, memory_order_relaxed);
+	return irt_atomic_load_relaxed(worker->reported_progress);
 }
 
 uint64 _irt_progress_reporting_print_progress_callback(void* data) {
