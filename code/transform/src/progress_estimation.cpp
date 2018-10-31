@@ -37,10 +37,13 @@
 
 #include "insieme/transform/progress_estimation.h"
 
+#include <map>
+
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -232,6 +235,59 @@ namespace transform {
 			return compound;
 		}
 
+		core::NodePtr handleParallelAndSingleReportingCalls(const core::NodePtr& node) {
+			auto& mgr = node.getNodeManager();
+			core::IRBuilder builder(mgr);
+			const auto& ext = mgr.getLangExtension<ProgressEstimationExtension>();
+			const auto& parallelExt= mgr.getLangExtension<core::lang::ParallelExtension>();
+
+			// collect replacements
+			std::map<core::NodeAddress, core::NodePtr> replacements;
+			core::visitDepthFirst(core::NodeAddress(node), [&](const core::LiteralAddress& addr){
+				// only interested in progress reporting literals (calls)
+				const auto& node = addr.getAddressedNode();
+				if(node == ext.getProgressReportingThreadLiteral()) {
+					// check the path up to root and check, whether we need to replace the reporting literal to a non-thread-local one
+					bool isParallel = false;
+					for(unsigned i = 0; i < addr.getDepth(); ++i) {
+						const auto& ancestor = addr.getParentNode(i);
+						// if the first OMP ancestor we find is a parallel construct, we are running this code in parallel
+						if(parallelExt.isCallOfParallel(ancestor)) {
+							isParallel = true;
+							break;
+
+							// if the first OMP ancestor we find is a single construct, we are not running this code in parallel
+						} else if(parallelExt.isCallOfPFor(ancestor)
+								&& parallelExt.isCallOfGetThreadGroup(core::analysis::getArgument(ancestor, 0))
+								&& core::analysis::getArgument(ancestor, 1) == builder.intLit(0)
+								&& core::analysis::getArgument(ancestor, 2) == builder.intLit(1)
+								&& core::analysis::getArgument(ancestor, 3) == builder.intLit(1)) {
+							break;
+
+							// if the first OMP ancestor we find is a master construct, we are not running this code in parallel
+						} else if(const auto& ifStmt = ancestor.isa<core::IfStmtPtr>()) {
+							const auto& condition = ifStmt.getCondition().isa<core::CallExprPtr>();
+							const auto getThreadId = builder.getThreadId();
+							if(condition
+									&& condition.getFunctionExpr() == builder.getLangBasic().getOperator(getThreadId.getType(), core::lang::BasicGenerator::Eq)
+									&& core::analysis::getArgument(condition, 0) == getThreadId
+									&& core::analysis::getArgument(condition, 1) == builder.getZero(getThreadId.getType())) {
+								break;
+							}
+						}
+					}
+
+					// if we are inside a parallel region, we don't replace the node
+					if(!isParallel) {
+						replacements[addr] = ext.getProgressReportingLiteral();
+					}
+				}
+			}, true, false);
+
+			// and perform the replacement
+			return core::transform::replaceAll(node.getNodeManager(), replacements);
+		}
+
 		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const ProgressReportingType progressReportingLimit) {
 			// first we transform all the lambdas bottom to top. We add reporting calls and annotate the unreported progress to them
 			auto res = core::transform::transformBottomUp(node, [&](const core::LambdaExprPtr& lambda) {
@@ -263,13 +319,7 @@ namespace transform {
 
 			// Our transformation generated just per-thread reporting calls.
 			// Now we transform the code so that all the reporting outside parallel regions is changed to non-thread-local reportings
-			auto& mgr = res.getNodeManager();
-			const auto& ext = mgr.getLangExtension<ProgressEstimationExtension>();
-			const auto& parallelExt= mgr.getLangExtension<core::lang::ParallelExtension>();
-			res = core::transform::replaceAllGen(mgr, res, ext.getProgressReportingThreadLiteral(), ext.getProgressReportingLiteral(),
-			                                     [&parallelExt](const core::NodePtr& node) {
-				return parallelExt.isCallOfParallel(node) ? core::transform::ReplaceAction::Prune : core::transform::ReplaceAction::Process;
-			});
+			res = handleParallelAndSingleReportingCalls(res);
 
 			return res;
 		}

@@ -465,16 +465,24 @@ namespace transform {
 				var ref<int<4>,f,f,plain> v1 = 0;         // effort 1
 				var ref<int<4>,f,f,plain> v2 = 1;         // effort 1
 			};
+			def singleFun = () -> unit {
+				c(1);
+			};
 			def parFun = function () -> unit {
 				b(4);
 				b(5);
+				if(get_thread_id(0u) == 0u) {                                                                 // this originated from a #pragma omp master
+					var ref<int<4>,f,f,plain> v1 = 0;
+				}
+				b(4);
+				pfor(get_thread_group(0u), 0, 1, 1, (v0 : int<4>, v1 : int<4>, v2 : int<4>) => singleFun());  // this originated from a #pragma omp single
 				a(a(a(6)));
 				merge_all();
 			};
 			{
 				a(0);
 				b(1);
-				merge(parallel( job[1ul...] => parFun() ));
+				merge(parallel( job[1ul...] => parFun() ));                                                   // this originated from a #pragma omp parallel
 			})";
 
 		// The important part here is not the reported numbers, but the fact that the efforts are reported per-thread inside the function called by parallel
@@ -487,21 +495,46 @@ namespace transform {
 				var ref<int<4>,f,f,plain> v1 = 0;
 				return p;
 			};
+			def c = function (p : ref<int<4>,f,f,plain>) -> int<4> {
+				a(*p);
+				report_progress(8ull);                      // here we are in a non-parallel context (single)
+				b(*p);
+				report_progress(11ull);                     // here we are in a non-parallel context (single)
+				return *p;
+			};
+			def singleFun = function () -> unit {
+				c(1);
+			};
 			def parFun = () -> unit {
 				b(4);
-				report_progress_thread(8ull);
+				report_progress_thread(8ull);               // here we are in a parallel context
 				b(5);
-				report_progress_thread(8ull);
+				if(get_thread_id(0u)==0u) {
+					var ref<int<4>,f,f,plain> p = 0;
+					report_progress(13ull);                   // here we are in a non-parallel context (master)
+				} else {
+					report_progress(12ull);                   // here we are in a non-parallel context (master)
+				}
+				b(4);
+				report_progress_thread(8ull);               // here we are in a parallel context
+				pfor(
+					get_thread_group(0u),
+					0,
+					1,
+					1,
+					(v0 : int<4>, v1 : int<4>, v2 : int<4>) => singleFun()
+				);
+				report_progress_thread(13ull);              // here we are in a parallel context
 				a(a(a(6)));
-				report_progress_thread(21ull);
+				report_progress_thread(21ull);              // here we are in a parallel context
 				merge_all();
 			};
 			{
 				a(0);
 				b(1);
-				report_progress(15ull);
+				report_progress(15ull);                     // here we are in a non-parallel context (outside parallel)
 				merge(parallel(job[1ul...] => parFun()));
-				report_progress(9ull);
+				report_progress(9ull);                      // here we are in a non-parallel context (outside parallel)
 			})");
 	}
 
