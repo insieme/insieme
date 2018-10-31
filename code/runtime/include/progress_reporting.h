@@ -86,11 +86,18 @@ uint64 _irt_progress_reporting_print_progress_callback(void* data) {
 	uint64 current_time = irt_time_ms();
 	fprintf(stderr, "%" PRIu64 " ", current_time - reporting_data->start_time);
 
-	// print progress individually for each worker
-	uint64 global_progress = irt_report_progress(0);
+//	// print progress individually for each worker
+//	uint64 global_progress = irt_report_progress(0);
+//	for(int i = 0; i < irt_g_worker_count; ++i) {
+//		fprintf(stderr, "%" PRIu64 " ", irt_progress_reporting_get_worker_progress(irt_g_workers[i]) + global_progress);
+//	}
+
+	// print sum of worker progress
+	uint64 global_progress = irt_report_progress(0) * irt_g_worker_count;
 	for(int i = 0; i < irt_g_worker_count; ++i) {
-		fprintf(stderr, "%" PRIu64 " ", irt_progress_reporting_get_worker_progress(irt_g_workers[i]) + global_progress);
+		global_progress += irt_progress_reporting_get_worker_progress(irt_g_workers[i]);
 	}
+	fprintf(stderr, "%" PRIu64, global_progress);
 
 //	// print maximum progress increment for each worker
 //	uint64 max_diff = 0;
