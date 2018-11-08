@@ -68,6 +68,8 @@ extern "C" {
 	void hat_dump_statistics_to_file(StablePtr hs_solver_stats, const char* keyPostfix, const char* filename);
 	void hat_dump_assignment(StablePtr hs_context, const char* filename, size_t generateGraph);
 
+	StablePtr hat_drop_assignment(StablePtr hs_context);
+
 	// NodePath
 	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
 	size_t hat_node_path_length(StablePtr addr_hs);
@@ -135,6 +137,11 @@ namespace haskell {
 		}
 		std::cout << "Dumping assignment ...\n";
 		hat_dump_assignment(context_hs,filenamePrefix.c_str(),(generateGraph)?1:0);
+	}
+
+
+	void Context::dropAssignment() {
+		context_hs = hat_drop_assignment(context_hs);
 	}
 
 	NodePtr Context::getRoot() const {

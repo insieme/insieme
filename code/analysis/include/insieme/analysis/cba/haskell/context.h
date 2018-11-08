@@ -108,6 +108,8 @@ namespace haskell {
 
 		void dumpSolution(const std::string& filenamePrefix = "solution", bool generateGraph = false) const;
 
+		void dropAssignment();
+
 		// -- haskell engine specific requirements --
 
 		void setRoot(const core::NodePtr&);
