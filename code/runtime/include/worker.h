@@ -107,7 +107,7 @@ struct _irt_worker {
 	#endif
 
 	#ifdef IRT_ENABLE_PROGRESS_REPORTING
-	IRT_ATOMIC_TYPE(uint64) reported_progress;
+	volatile uint64 reported_progress;
 	#endif // IRT_ENABLE_PROGRESS_REPORTING
 
 	// memory reuse stuff
