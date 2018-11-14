@@ -140,8 +140,8 @@ namespace compiler {
 		cmd << (libs.getLibs().empty() ? "" : " -l") << join(" -l", libs.getLibs());
 		if(outputFile.size()) cmd << " -o " << outputFile;
 
-		// redirect streams if compilation should be 'silent'
-		if(silent) { cmd << " > /dev/null 2>&1"; }
+		cmd << "  > " + standardOutput
+		    << " 2> " + standardErrorOutput;
 
 		return cmd.str();
 	}

@@ -92,10 +92,11 @@ namespace compiler {
 
 		vector<string> incDirs;
 
-		bool silent;
+		string standardOutput = "/dev/stdout";
+		string standardErrorOutput = "/dev/stderr";
 
 	  public:
-		Compiler(const string& executable) : executable(executable), libs(), incDirs(), silent(false){};
+		Compiler(const string& executable) : executable(executable), libs(), incDirs() {};
 
 		static Compiler getDefaultC99Compiler();
 
@@ -117,12 +118,25 @@ namespace compiler {
 			return flags;
 		}
 
-		bool isSilent() const {
-			return silent;
+		const string& getStandardOutput() const {
+			return standardOutput;
 		}
 
-		void setSilent(bool silent = true) {
-			this->silent = silent;
+		void setStandardOutput(const string& standardOutput) {
+			this->standardOutput = standardOutput;
+		}
+
+		const string& getStandardErrorOutput() const {
+			return standardOutput;
+		}
+
+		void setStandardErrorOutput(const string& standardErrorOutput) {
+			this->standardErrorOutput = standardErrorOutput;
+		}
+
+		void setSilent() {
+			this->standardOutput = "/dev/null";
+			this->standardErrorOutput = "/dev/null";
 		}
 
 		void addFlag(const string& flag) {
