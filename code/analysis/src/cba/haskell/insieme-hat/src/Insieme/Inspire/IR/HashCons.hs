@@ -151,10 +151,10 @@ lookupOrAdd x (c, sr) = do
        modifyIORef' sr (+1)
        putMVar hcGlobalId (inc i)
 
-       do
-         sz <- readIORef sr
-         when (sz `mod` 10000 == 0) $
-             print ("HC cache size", show (typeRep @a), sz)
+       --do
+         --sz <- readIORef sr
+         --when (sz `mod` 10000 == 0) $
+         --    print ("HC cache size", show (typeRep @a), sz)
 
        let hc = HC hx i ref
 
