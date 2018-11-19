@@ -156,6 +156,9 @@ namespace frontend {
 			return ret;
 		}
 
+		// We search backwards for the opening brace and foreward for the closing one, as there seem to be situations where the reported locations aren't correct.
+		// As of 2018-11-19, we are not completely sure whether the following comments still hold true and we are responsible for the wrongly reported locations or not.
+
 		// This is still buggy with Clang 3.6.2:
 		// when pragmas are just after the beginning of a compound stmt, example:
 		// {
@@ -174,35 +177,33 @@ namespace frontend {
         // Therefore here we sould assert that the source locations(L and R) point EXACTLY to { and } respectively,
         // and solve this issue in the pragma lexer. (I have seen it working, but without the Raw string in C mode).
 
-		enum { MacroIDBit = 1U << 31 }; // from clang/Basic/SourceLocation.h for use with cpp classes
-
-		// this loop ensures that when correcting the left bracket location, we ignore any left brackets contained in pragmas
+		// search backwards and ignore any left brackets contained in pragmas. We start at the location given to us by clang
+		auto nextLeftBraceLoc = leftBraceLoc;
 		do {
-			SourceLocation leftBraceImmediateLoc = SourceMgr.getImmediateSpellingLoc(leftBraceLoc);
-			
+			SourceLocation leftBraceImmediateLoc = SourceMgr.getImmediateSpellingLoc(nextLeftBraceLoc);
+
 			std::pair<FileID, unsigned> locInfo = SourceMgr.getDecomposedLoc(leftBraceImmediateLoc);
 			llvm::StringRef buffer = SourceMgr.getBufferData(locInfo.first);
 			const char* strData = buffer.begin() + locInfo.second;
 			char const* lBracePos = strbchr(strData, buffer.begin(), '{');
 
+			// if we didn't find an opening brace, we don't change anything and stop here
 			if(lBracePos == buffer.begin()) {
 				break;
 			}
 
-			// We know the location of the left bracket, we overwrite the value of L with the correct location
-			// but only if the location is valid as in getFileLocWithOffset() in SourceLocation
-			auto newOffset = lBracePos - strData - 1;
-			if((((leftBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + newOffset) & MacroIDBit) == 0) {
-				leftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset);
-			} else {
-				break;
-			}
-				
+			// we found the opening brace and update the location
+			auto newOffset = lBracePos - strData;
+			leftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset);
+			// for the next iteration, we start our search one character before the current result
+			nextLeftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset - 1);
+
+			// we keep searching while the found brace is located within any of the pending pragmas
 		} while(::any(pimpl->pending_pragma, [this, leftBraceLoc](const PragmaPtr& pragma) {
-			unsigned l = getLineNum(leftBraceLoc);
-			return getLineNum(pragma->getStartLocation()) <= l && getLineNum(pragma->getEndLocation()) >= l;
-		}));
-			
+				unsigned leftBraceLine = getLineNum(leftBraceLoc);
+				return getLineNum(pragma->getStartLocation()) <= leftBraceLine && getLineNum(pragma->getEndLocation()) >= leftBraceLine;
+			}));
+
 		// For the right bracket, we start at the final statement in the compound
 		//   (or its start if it is empty) and search forward until we find the first "}"
 		// Otherwise, cases such as this:
@@ -226,10 +227,8 @@ namespace frontend {
 			const char* strData = buffer.begin() + locInfo.second;
 			char const* rBracePos = strchr(strData, '}');
 
-			// If we know the location of the right bracket, we overwrite the value of R with the correct location
-			if(rBracePos != NULL && (((rightBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + (rBracePos - strData)) & MacroIDBit) == 0) {
-				rightBraceLoc = rightBraceImmediateLoc.getLocWithOffset(rBracePos - strData);
-			}
+			// we found the opening brace and update the location
+			rightBraceLoc = rightBraceImmediateLoc.getLocWithOffset(rBracePos - strData);
 		}
 
 		// the source range we inspect is defined by the new source locations,
