@@ -177,6 +177,8 @@ namespace frontend {
         // Therefore here we sould assert that the source locations(L and R) point EXACTLY to { and } respectively,
         // and solve this issue in the pragma lexer. (I have seen it working, but without the Raw string in C mode).
 
+		enum { MacroIDBit = 1U << 31 }; // from clang/Basic/SourceLocation.h for use with cpp classes
+
 		// search backwards and ignore any left brackets contained in pragmas. We start at the location given to us by clang
 		auto nextLeftBraceLoc = leftBraceLoc;
 		do {
@@ -192,11 +194,15 @@ namespace frontend {
 				break;
 			}
 
-			// we found the opening brace and update the location
+			// we found the opening brace and update the location if the location is valid as in getFileLocWithOffset() in SourceLocation
 			auto newOffset = lBracePos - strData;
-			leftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset);
-			// for the next iteration, we start our search one character before the current result
-			nextLeftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset - 1);
+			if((((leftBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + newOffset) & MacroIDBit) == 0) {
+				leftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset);
+				// for the next iteration, we start our search one character before the current result
+				nextLeftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset - 1);
+			} else {
+				break;
+			}
 
 			// we keep searching while the found brace is located within any of the pending pragmas
 		} while(::any(pimpl->pending_pragma, [this, leftBraceLoc](const PragmaPtr& pragma) {
@@ -227,8 +233,10 @@ namespace frontend {
 			const char* strData = buffer.begin() + locInfo.second;
 			char const* rBracePos = strchr(strData, '}');
 
-			// we found the opening brace and update the location
-			rightBraceLoc = rightBraceImmediateLoc.getLocWithOffset(rBracePos - strData);
+			// we found the opening brace and update the location if the location is valid as in getFileLocWithOffset() in SourceLocation
+			if(rBracePos != NULL && (((rightBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + (rBracePos - strData)) & MacroIDBit) == 0) {
+				rightBraceLoc = rightBraceImmediateLoc.getLocWithOffset(rBracePos - strData);
+			}
 		}
 
 		// the source range we inspect is defined by the new source locations,
