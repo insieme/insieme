@@ -77,6 +77,7 @@ namespace transform {
 		{
 			const auto call = buildProgressReportingCall(mgr, 0);
 			assert_correct_ir(call);
+			EXPECT_TRUE(ext.isCallOfAnyReportingLiteral(call));
 
 			ASSERT_TRUE(ext.isCallOfProgressReportingLiteral(call));
 			const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
@@ -90,6 +91,7 @@ namespace transform {
 		{
 			const auto call = buildProgressReportingThreadCall(mgr, 0);
 			assert_correct_ir(call);
+			EXPECT_TRUE(ext.isCallOfAnyReportingLiteral(call));
 
 			ASSERT_TRUE(ext.isCallOfProgressReportingThreadLiteral(call));
 			const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
@@ -941,6 +943,151 @@ namespace transform {
 					}
 					gen_post_inc(p);
 					report_progress(2ull);                  // 1 builtin, 1 implicit deref
+				}
+			})");
+	}
+
+	TEST(IfElseMerging, Simple) {
+		const auto input = R"(
+			def expensive_call = function () -> unit {
+				var ref<int<4>,f,f,plain> v0 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v1 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v2 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v3 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v4 = 9+8+7+6+5+4+3+2+1+0; // unreported effort: 10
+			};
+			{
+				while(true) {
+					var ref<int<4>,f,f,plain> v0 = 0;
+					if(*v0 >= 100) {
+						continue;
+					}
+					if(*v0 < 0) {
+						gen_post_inc(v0);
+					}
+					gen_post_inc(v0);
+					if(*v0 == 2) {
+						gen_post_inc(v0);
+					} else {
+						gen_post_inc(v0);
+						gen_post_inc(v0);
+					}
+					if(*v0 == 101) {
+						return unit;
+					}
+					gen_post_inc(v0);
+					if(*v0 == 2) {
+						gen_post_inc(v0);
+					} else {
+						expensive_call();
+					}
+					gen_post_inc(v0);
+				}
+			})";
+
+		TEST_PROGRESS(5, input, R"(
+			def expensive_call = function () -> unit {
+				var ref<int<4>,f,f,plain> v0 = 9+8+7+6+5+4+3+2+1+0;
+				report_progress(10ull);
+				var ref<int<4>,f,f,plain> v1 = 9+8+7+6+5+4+3+2+1+0;
+				report_progress(10ull);
+				var ref<int<4>,f,f,plain> v2 = 9+8+7+6+5+4+3+2+1+0;
+				report_progress(10ull);
+				var ref<int<4>,f,f,plain> v3 = 9+8+7+6+5+4+3+2+1+0;
+				report_progress(10ull);
+				var ref<int<4>,f,f,plain> v4 = 9+8+7+6+5+4+3+2+1+0; // unreported effort: 10
+			};
+			{
+				while(true) {
+					var ref<int<4>,f,f,plain> v0 = 0;
+					if(*v0>=100) {
+						report_progress(8ull);                // 2 branch overhead, 1 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin, 1 from continue below
+						continue;
+					} else {
+						report_progress(7ull);                // 2 branch overhead, 1 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin
+					}                                       // NOTE: No merge of branch reporting calls because one of them doesn't report at the end
+					if(*v0<0) {
+						report_progress(4ull);                // 2 branch overhead, 1 from deref, 1 from builtin
+						gen_post_inc(v0);
+						report_progress(2ull);                // 2 from stmt above
+					} else {
+						report_progress(4ull);                // 2 branch overhead, 1 from deref, 1 from builtin
+					}
+					gen_post_inc(v0);
+					if(*v0==2) {
+						report_progress(6ull);                // 2 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin
+						gen_post_inc(v0);
+						report_progress(2ull);                // 2 from stmt above
+					} else {
+						report_progress(6ull);                // 2 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin
+						gen_post_inc(v0);
+						gen_post_inc(v0);
+						report_progress(4ull);                // 4 from stmts above
+					}                                       // NOTE: No merge of branch reporting calls because values are more than 5% of limit (=0.25) apart
+					if(*v0==101) {
+						report_progress(5ull);                // 2 branch overhead, 1 from deref, 1 from builtin, 1 from return below
+						return unit;
+					} else {
+						report_progress(4ull);                // 2 branch overhead, 1 from deref, 1 from builtin
+					}                                       // NOTE: No merge of branch reporting calls because one of them doesn't report at the end
+					gen_post_inc(v0);
+					if(*v0==2) {
+						report_progress(6ull);                // 2 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin
+						gen_post_inc(v0);
+						report_progress(2ull);                // 2 from stmt above
+					} else {
+						report_progress(6ull);                // 2 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin
+						expensive_call();
+						report_progress(15ull);               // 10 unreported, 5 call overhead
+					}                                       // NOTE: No merge of branch reporting calls because values are more than 5% of limit (=0.25) apart
+					gen_post_inc(v0);
+					report_progress(2ull);                  // 2 from stmt above
+				}
+			})");
+
+		TEST_PROGRESS(100, input, R"(
+			def expensive_call = function () -> unit {
+				var ref<int<4>,f,f,plain> v0 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v1 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v2 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v3 = 9+8+7+6+5+4+3+2+1+0;
+				var ref<int<4>,f,f,plain> v4 = 9+8+7+6+5+4+3+2+1+0; // unreported effort: 50
+			};
+			{
+				while(true) {
+					var ref<int<4>,f,f,plain> v0 = 0;
+					if(*v0>=100) {
+						report_progress(8ull);                // 2 branch overhead, 1 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin, 1 from continue below
+						continue;
+					} else {
+						report_progress(7ull);                // 2 branch overhead, 1 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin
+					}                                       // NOTE: No merge of branch reporting calls because one of them doesn't report at the end
+					if(*v0<0) {
+						gen_post_inc(v0);                     // NOTE: reported progress would have been 6 here and 4 for the else block
+					}                                       // NOTE: progress of if/else blocks merged to the average value of 5, because the difference was below 5% of limit (=5)
+					gen_post_inc(v0);
+					if(*v0==2) {
+						gen_post_inc(v0);                     // NOTE: reported progress would have been 13 here (including 5 from above if)
+					} else {
+						gen_post_inc(v0);
+						gen_post_inc(v0);                     // NOTE: reported progress would have been 15 here (including 5 from above if)
+					}                                       // NOTE: progress of if/else blocks merged to the average value of 14, because the difference was below 5% of limit (=5)
+					if(*v0==101) {
+						report_progress(19ull);               // 14 from above, 2 branch overhead, 1 from deref, 1 from builtin, 1 from return below
+						return unit;
+					} else {
+						report_progress(18ull);               // 14 from above, 2 branch overhead, 1 from deref, 1 from builtin
+					}                                       // NOTE: No merge of branch reporting calls because one of them doesn't report at the end
+					gen_post_inc(v0);
+					if(*v0==2) {
+						gen_post_inc(v0);
+						report_progress(8ull);                // 2 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin, 2 from stmt above
+					} else {
+						expensive_call();
+						report_progress(61ull);               // 2 from stmt above if, 2 branch overhead, 1 from deref, 1 from builtin, 50 unreported, 5 call overhead
+					}                                       // NOTE: No merge of branch reporting calls because values are more than 5% of limit (=5) apart
+					gen_post_inc(v0);
+					report_progress(2ull);                  // 2 from stmt above
 				}
 			})");
 	}

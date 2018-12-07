@@ -57,6 +57,10 @@ namespace transform {
 		LANG_EXT_LITERAL(ProgressReportingLiteral, "report_progress", "(uint<16>) -> unit");
 
 		LANG_EXT_LITERAL(ProgressReportingThreadLiteral, "report_progress_thread", "(uint<16>) -> unit");
+
+		bool isCallOfAnyReportingLiteral(const core::NodePtr& node) const {
+			return isCallOfProgressReportingLiteral(node) || isCallOfProgressReportingThreadLiteral(node);
+		}
 	};
 
 	core::CallExprPtr buildProgressReportingCall(core::NodeManager& manager, const ProgressReportingType progress);

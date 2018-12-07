@@ -60,6 +60,7 @@ namespace transform {
 		ProgressReportingType EFFORT_FOR_LOOP_ITERATOR = 1;
 		ProgressReportingType EFFORT_FOR_LOOP_CONDITION = 1;
 		ProgressReportingType EFFORT_FOR_LOOP_ITERATOR_UPDATE = 1;
+		float maxIfElseReportingDifferencePercentage = 0.05;
 
 		struct UnreportedProgressAnnotation : public core::value_annotation::copy_on_migration {
 			ProgressReportingType progress;
@@ -126,6 +127,7 @@ namespace transform {
 			core::NodeManager& mgr = compound.getNodeManager();
 			core::IRBuilder builder(mgr);
 			core::StatementList stmts(compound.getStatements());
+			const auto& ext = mgr.getLangExtension<ProgressEstimationExtension>();
 
 			// if the current progress is 0, we insert a new statement into the list and update the iterator
 			auto insertProgressReportingCall = [&](core::StatementList::iterator& it) {
@@ -173,14 +175,34 @@ namespace transform {
 					// acount for the branching overhead and the unreported progress of the condition
 					progress += EFFORT_BRANCH + getUnreportedProgress(ifStmt->getCondition());
 					// now handle both branches with a start offset of the progress we have at the moment
-					ProgressReportingType bodyProgress = progress;
+					ProgressReportingType thenBodyProgress = progress;
+					ProgressReportingType elseBodyProgress = progress;
+					auto newThenBody = handleCompound(thenBodyProgress, ifStmt->getThenBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					auto newElseBody = handleCompound(elseBodyProgress, ifStmt->getElseBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					const auto progressDifference = abs(((long long) thenBodyProgress) - ((long long) elseBodyProgress));
+
+					assert_true(newThenBody->size() >= 1);
+					assert_true(newElseBody->size() >= 1);
+					const auto& lastThenStmt = *(newThenBody.end() - 1);
+					const auto& lastElseStmt = *(newElseBody.end() - 1);
+
 					core::NodeMap replacements;
-					replacements[core::IfStmtAddress(ifStmt)->getThenBody()] = handleCompound(bodyProgress, ifStmt->getThenBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
-					bodyProgress = progress;
-					replacements[core::IfStmtAddress(ifStmt)->getElseBody()] = handleCompound(bodyProgress, ifStmt->getElseBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					// if both last statements are reporting calls, none of them reports something above the reporting limit and their difference is sufficiently small
+					if(ext.isCallOfAnyReportingLiteral(lastThenStmt) && ext.isCallOfAnyReportingLiteral(lastElseStmt)
+							&& thenBodyProgress < progressReportingLimit && elseBodyProgress < progressReportingLimit
+							&& progressDifference <= progressReportingLimit * maxIfElseReportingDifferencePercentage) {
+						// we remove the reporting calls at the end and set the current progress to the average of both numbers
+						newThenBody = builder.compoundStmt(core::StatementList(newThenBody.begin(), newThenBody.end() - 1));
+						newElseBody = builder.compoundStmt(core::StatementList(newElseBody.begin(), newElseBody.end() - 1));
+						progress = (thenBodyProgress + elseBodyProgress) / 2;
+
+						// otherwise we keep the bodies as they are and set the current progress to 0
+					} else {
+						progress = 0;
+					}
+					replacements[core::IfStmtAddress(ifStmt)->getThenBody()] = newThenBody;
+					replacements[core::IfStmtAddress(ifStmt)->getElseBody()] = newElseBody;
 					*it = core::transform::replaceAllGen(mgr, ifStmt, replacements);
-					// the progress has been reported in either branch
-					progress = 0;
 
 					// all other nodes are processed the same
 				} else {
@@ -341,7 +363,7 @@ namespace transform {
 
 	ProgressReportingType getReportedProgress(const core::NodePtr& node) {
 		const auto& ext = node.getNodeManager().getLangExtension<ProgressEstimationExtension>();
-		if(!ext.isCallOfProgressReportingLiteral(node) && !ext.isCallOfProgressReportingThreadLiteral(node)) return 0;
+		if(!ext.isCallOfAnyReportingLiteral(node)) return 0;
 		auto uintValue = core::analysis::getArgument(node, 0).as<core::LiteralPtr>();
 		return std::stoull(uintValue->getValue()->getValue());
 	}
