@@ -70,7 +70,7 @@ static inline void irt_report_progress_thread(uint64 progress) {
 	irt_worker_get_current()->reported_progress += progress;
 }
 
-uint64 irt_progress_reporting_get_worker_progress(irt_worker* worker) {
+uint64 _irt_progress_reporting_get_worker_progress(irt_worker* worker) {
 	return worker->reported_progress;
 }
 
@@ -83,20 +83,20 @@ uint64 _irt_progress_reporting_print_progress_callback(void* data) {
 //	// print progress individually for each worker
 //	uint64 global_progress = irt_report_progress(0);
 //	for(int i = 0; i < irt_g_worker_count; ++i) {
-//		fprintf(stderr, "%" PRIu64 " ", irt_progress_reporting_get_worker_progress(irt_g_workers[i]) + global_progress);
+//		fprintf(stderr, "%" PRIu64 " ", _irt_progress_reporting_get_worker_progress(irt_g_workers[i]) + global_progress);
 //	}
 
 	// print sum of worker progress
 	uint64 global_progress = irt_report_progress(0) * irt_g_worker_count;
 	for(int i = 0; i < irt_g_worker_count; ++i) {
-		global_progress += irt_progress_reporting_get_worker_progress(irt_g_workers[i]);
+		global_progress += _irt_progress_reporting_get_worker_progress(irt_g_workers[i]);
 	}
 	fprintf(stderr, "%" PRIu64, global_progress);
 
 //	// print maximum progress increment for each worker
 //	uint64 max_diff = 0;
 //	for(int i = 0; i < irt_g_worker_count; ++i) {
-//		uint64 new_value = irt_progress_reporting_get_worker_progress(irt_g_workers[i]);
+//		uint64 new_value = _irt_progress_reporting_get_worker_progress(irt_g_workers[i]);
 //		uint64 current_diff = new_value - reporting_data->last_progress[i];
 //		reporting_data->last_progress[i] = new_value;
 //		max_diff = MAX(max_diff, current_diff);
