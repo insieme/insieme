@@ -57,7 +57,6 @@
 
 typedef struct irt_progress_reporting_data {
 	uint64 start_time;
-	uint64* last_progress;
 } irt_progress_reporting_data;
 
 // report some global progress
@@ -112,7 +111,6 @@ void irt_progress_reporting_init() {
 	static irt_progress_reporting_data reporting_data;
 	static irt_maintenance_lambda ml = { _irt_progress_reporting_print_progress_callback, &reporting_data, IRT_PROGRESS_REPORTING_INTERVAL, NULL };
 	reporting_data.start_time = irt_time_ms();
-	reporting_data.last_progress = calloc(irt_g_worker_count, sizeof(uint64));
 	irt_maintenance_register(&ml);
 }
 
