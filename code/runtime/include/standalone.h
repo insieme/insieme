@@ -181,6 +181,9 @@ void irt_exit_handler() {
 
 	#if defined IRT_ENABLE_PROGRESS_REPORTING || (defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS)
 	irt_maintenance_cleanup();
+	#ifdef IRT_ENABLE_PROGRESS_REPORTING
+	irt_progress_reporting_end();
+	#endif // IRT_ENABLE_PROGRESS_REPORTING
 	#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
 	irt_g_exit_handling_done = true;

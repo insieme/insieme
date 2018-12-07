@@ -107,11 +107,20 @@ uint64 _irt_progress_reporting_print_progress_callback(void* data) {
 	return IRT_PROGRESS_REPORTING_INTERVAL;
 }
 
-void irt_progress_reporting_init() {
+irt_progress_reporting_data* _irt_progress_reporting_get_data() {
 	static irt_progress_reporting_data reporting_data;
-	static irt_maintenance_lambda ml = { _irt_progress_reporting_print_progress_callback, &reporting_data, IRT_PROGRESS_REPORTING_INTERVAL, NULL };
-	reporting_data.start_time = irt_time_ms();
+	return &reporting_data;
+}
+
+void irt_progress_reporting_init() {
+	irt_progress_reporting_data* reporting_data = _irt_progress_reporting_get_data();
+	static irt_maintenance_lambda ml = { _irt_progress_reporting_print_progress_callback, reporting_data, IRT_PROGRESS_REPORTING_INTERVAL, NULL };
+	reporting_data->start_time = irt_time_ms();
 	irt_maintenance_register(&ml);
+}
+
+void irt_progress_reporting_end() {
+	_irt_progress_reporting_print_progress_callback(_irt_progress_reporting_get_data());
 }
 
 
