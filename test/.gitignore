@@ -1,10 +1,7 @@
 # Ignore all generated files
 build*
 *.insieme
-*.insieme.c
-*.insieme.cpp
-*.insieme.*.c
-*.insieme.*.cpp
+*.insieme.*
 *.out
 *.ir
 *.ref
