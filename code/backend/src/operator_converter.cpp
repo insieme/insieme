@@ -633,6 +633,11 @@ namespace backend {
 				in = c_ast::ref(in);
 			}
 
+			// since dereferenced expressions are references in C++, do not add an extra cast
+			if (src.isPlain() && trg.isCppReference() && !trg.isConst()) {
+				return in;
+			}
+
 			auto res_type = GET_TYPE_INFO(call->getType()).rValueType;
 			return c_ast::cast(res_type, in);
 		};
