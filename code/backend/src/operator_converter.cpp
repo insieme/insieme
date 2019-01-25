@@ -634,7 +634,7 @@ namespace backend {
 			}
 
 			// since dereferenced expressions are references in C++, do not add an extra cast
-			if (src.isPlain() && trg.isCppReference() && !trg.isConst()) {
+			if (src.isPlain() && trg.isCppReference() && src.isConst() == trg.isConst() && src.isVolatile() == trg.isVolatile()) {
 				return in;
 			}
 
