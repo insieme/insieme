@@ -53,6 +53,10 @@
 #include "impl/instrumentation_events.impl.h"
 #include "irt_types.h"
 
+#ifdef IRT_ENABLE_TASK_THROUGHPUT_REPORTING
+#include <progress_reporting.h>
+#endif
+
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item* wi, uint32 index) {
 	IRT_ASSERT(index < wi->num_groups, IRT_ERR_INTERNAL, "WG membership access out of range.");
 	return wi->wg_memberships[index];
@@ -344,6 +348,10 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_wi_implementation* wimpl = wi->impl;
 	irt_optimizer_remove_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
 	irt_optimizer_compute_optimizations(&(wimpl->variants[wi->selected_impl_variant]), wi, false);
+
+	#ifdef IRT_ENABLE_TASK_THROUGHPUT_REPORTING
+	irt_report_progress(1);
+	#endif
 
 	// end
 	worker->finalize_wi = wi;
