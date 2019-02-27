@@ -153,6 +153,20 @@ namespace cmd {
 		}
 
 		/**
+		 * Allows to add a parameter to the program options with a string default value for printing.
+		 *
+		 * @param name the name of the parameter to be added
+		 * @param target the target to be used for storing whether the flag has been set or not
+		 * @param def the default value to be used if non is provided
+		 * @param defValueString the string representation of the default value
+		 * @param description the description of the parameter to be shown in the help message
+		 */
+		template <typename T>
+		void addParameter(const std::string& name, T& target, const T& def, const std::string& defValueString, const std::string& description) {
+			desc.add_options()(name.c_str(), boost::program_options::value<T>(&target)->default_value(def, defValueString), description.c_str());
+		}
+
+		/**
 		 * Parses the given command line options.
 		 * Note that the first argument will be ignored.
 		 */
