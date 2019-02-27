@@ -306,6 +306,7 @@ namespace transform {
 				}
 			}, true, false);
 
+			if(replacements.empty()) return node;
 			// and perform the replacement
 			return core::transform::replaceAll(node.getNodeManager(), replacements);
 		}
