@@ -144,7 +144,7 @@ namespace transform {
 		_finalDesiredIr = "decl report_progress_thread : (uint<16>) -> unit;" + _finalDesiredIr;             \
 		const auto _desiredOutput = builder.normalize(builder.parseStmt(_finalDesiredIr));                   \
 		assert_correct_ir(_desiredOutput);                                                                   \
-		const auto _withProgressEstimation = applyProgressEstimation(_input, REPORTING_LIMIT);               \
+		const auto _withProgressEstimation = applyProgressEstimation(_input, REPORTING_LIMIT, 0.05);         \
 		EXPECT_TRUE(_desiredOutput == _withProgressEstimation)                                               \
 		            << "\tActual Pretty: \n" << dumpReadable(_withProgressEstimation) << "\n\n"              \
 		            << "\tExpect Pretty: \n" << dumpReadable(_desiredOutput) << "\n";                        \

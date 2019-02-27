@@ -61,9 +61,11 @@ int main(int argc, char** argv) {
 	// register common options and flags needed by more than one driver
 	commonOptions.addFlagsAndParameters(parser);
 	transform::ProgressReportingType reportingLimit;
+	float maxIfElseReportingDifferenceFactor = 0.02;
 	std::string backendString;
-	parser.addParameter("reporting-limit", reportingLimit, transform::ProgressReportingType{ 100 }, "progress reporting limit");
-	parser.addParameter("backend",         backendString,  std::string(""),                         "backend selection (for compatibility reasons - ignored)");
+	parser.addParameter("reporting-limit", reportingLimit, transform::ProgressReportingType{ 1000 }, "progress reporting limit");
+	parser.addParameter("reporting-max-branch-difference-factor", maxIfElseReportingDifferenceFactor, 0.02f, "0.2", "Factor of reporting limit, above which reportings in if and else bodies will not be merged/averaged");
+	parser.addParameter("backend",         backendString,  std::string(""),                          "backend selection (for compatibility reasons - ignored)");
 	auto options = parser.parse(argc, argv);
 
 	// if options are invalid, exit non-zero
@@ -90,7 +92,8 @@ int main(int argc, char** argv) {
 	// ----- progress estimation ------
 
 	std::cout << "Applying progress estimation with a reporting limit of " << reportingLimit << " ...\n";
-	auto outputProgram = insieme::transform::applyProgressEstimation(program, reportingLimit);
+	std::cout << "  If/Else reportings below a factor of " << maxIfElseReportingDifferenceFactor << " of the reporting limit will be merged/averaged ...\n";
+	auto outputProgram = insieme::transform::applyProgressEstimation(program, reportingLimit, maxIfElseReportingDifferenceFactor);
 
 	// Note: The code below has been more or less copied directly from insiemecc
 

@@ -68,7 +68,7 @@ namespace transform {
 
 	ProgressReportingType getReportedProgress(const core::NodePtr& node);
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const ProgressReportingType progressReportingLimit);
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const ProgressReportingType progressReportingLimit, float maxIfElseReportingDifferenceFactor);
 
 } // end namespace transform
 } // end namespace insieme

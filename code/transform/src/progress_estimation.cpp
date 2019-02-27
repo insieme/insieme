@@ -60,7 +60,11 @@ namespace transform {
 		ProgressReportingType EFFORT_FOR_LOOP_ITERATOR = 1;
 		ProgressReportingType EFFORT_FOR_LOOP_CONDITION = 1;
 		ProgressReportingType EFFORT_FOR_LOOP_ITERATOR_UPDATE = 1;
-		float maxIfElseReportingDifferencePercentage = 0.05;
+
+		struct ReportingParameters {
+			ProgressReportingType progressReportingLimit;
+			float maxIfElseReportingDifferenceFactor;
+		};
 
 		struct UnreportedProgressAnnotation : public core::value_annotation::copy_on_migration {
 			ProgressReportingType progress;
@@ -123,7 +127,7 @@ namespace transform {
 			return progress;
 		}
 
-		core::CompoundStmtPtr handleCompound(ProgressReportingType& progress, const core::CompoundStmtPtr& compound, const ProgressReportingType progressReportingLimit, bool isRoot) {
+		core::CompoundStmtPtr handleCompound(ProgressReportingType& progress, const core::CompoundStmtPtr& compound, const ReportingParameters& reportingParameters, bool isRoot) {
 			core::NodeManager& mgr = compound.getNodeManager();
 			core::IRBuilder builder(mgr);
 			core::StatementList stmts(compound.getStatements());
@@ -149,7 +153,7 @@ namespace transform {
 				// special handling for compounds
 				if(const auto& innerCompound = stmt.isa<core::CompoundStmtPtr>()) {
 					// compound statement children are handeled recursively, counting from the current progress
-					*it = handleCompound(progress, innerCompound, progressReportingLimit, false);
+					*it = handleCompound(progress, innerCompound, reportingParameters, false);
 
 					// special handling for for loops
 				} else if(const auto& forLoop = stmt.isa<core::ForStmtPtr>()) {
@@ -158,7 +162,7 @@ namespace transform {
 					insertProgressReportingCall(it);
 					// now we handle the body. Each iteration gets a start progress offset which accounts for evaluating the condition as well as updating the iterator
 					ProgressReportingType bodyProgress = EFFORT_BRANCH + EFFORT_FOR_LOOP_CONDITION + EFFORT_FOR_LOOP_ITERATOR_UPDATE;
-					const auto newBody = handleCompound(bodyProgress, forLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					const auto newBody = handleCompound(bodyProgress, forLoop->getBody(), reportingParameters, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::ForStmtAddress(forLoop)->getBody(), newBody).as<core::ForStmtPtr>();
 
 					// special handling for while loops
@@ -167,7 +171,7 @@ namespace transform {
 					insertProgressReportingCall(it);
 					// now we handle the body. Each iteration gets a start progress offset which accounts the unreported progress of the condition + some branching overhead
 					ProgressReportingType bodyProgress = EFFORT_BRANCH + getUnreportedProgress(whileLoop->getCondition());
-					const auto newBody = handleCompound(bodyProgress, whileLoop->getBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					const auto newBody = handleCompound(bodyProgress, whileLoop->getBody(), reportingParameters, true); // enforce reporting of progress at exit points
 					*it = core::transform::replaceNode(mgr, core::WhileStmtAddress(whileLoop)->getBody(), newBody).as<core::WhileStmtPtr>();
 
 					// special handling for if/else stmts
@@ -177,8 +181,8 @@ namespace transform {
 					// now handle both branches with a start offset of the progress we have at the moment
 					ProgressReportingType thenBodyProgress = progress;
 					ProgressReportingType elseBodyProgress = progress;
-					auto newThenBody = handleCompound(thenBodyProgress, ifStmt->getThenBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
-					auto newElseBody = handleCompound(elseBodyProgress, ifStmt->getElseBody(), progressReportingLimit, true); // enforce reporting of progress at exit points
+					auto newThenBody = handleCompound(thenBodyProgress, ifStmt->getThenBody(), reportingParameters, true); // enforce reporting of progress at exit points
+					auto newElseBody = handleCompound(elseBodyProgress, ifStmt->getElseBody(), reportingParameters, true); // enforce reporting of progress at exit points
 					const auto progressDifference = abs(((long long) thenBodyProgress) - ((long long) elseBodyProgress));
 
 					assert_true(newThenBody->size() >= 1);
@@ -189,8 +193,8 @@ namespace transform {
 					core::NodeMap replacements;
 					// if both last statements are reporting calls, none of them reports something above the reporting limit and their difference is sufficiently small
 					if(ext.isCallOfAnyReportingLiteral(lastThenStmt) && ext.isCallOfAnyReportingLiteral(lastElseStmt)
-							&& thenBodyProgress < progressReportingLimit && elseBodyProgress < progressReportingLimit
-							&& progressDifference <= progressReportingLimit * maxIfElseReportingDifferencePercentage) {
+							&& thenBodyProgress < reportingParameters.progressReportingLimit && elseBodyProgress < reportingParameters.progressReportingLimit
+							&& progressDifference <= reportingParameters.progressReportingLimit * reportingParameters.maxIfElseReportingDifferenceFactor) {
 						// we remove the reporting calls at the end and set the current progress to the average of both numbers
 						newThenBody = builder.compoundStmt(core::StatementList(newThenBody.begin(), newThenBody.end() - 1));
 						newElseBody = builder.compoundStmt(core::StatementList(newElseBody.begin(), newElseBody.end() - 1));
@@ -216,7 +220,7 @@ namespace transform {
 
 					} else {
 						// if the progress until now and the stmtProgress are more than our limit
-						if(progress + stmtProgress > progressReportingLimit) {
+						if(progress + stmtProgress > reportingParameters.progressReportingLimit) {
 							// we report the progress until here
 							insertProgressReportingCall(it);
 						}
@@ -311,7 +315,7 @@ namespace transform {
 			return core::transform::replaceAll(node.getNodeManager(), replacements);
 		}
 
-		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const ProgressReportingType progressReportingLimit) {
+		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const ReportingParameters& reportingParameters) {
 			// first we transform all the lambdas bottom to top. We add reporting calls and annotate the unreported progress to them
 			auto res = core::transform::transformBottomUp(node, [&](const core::LambdaExprPtr& lambda) {
 				auto res = lambda;
@@ -324,8 +328,8 @@ namespace transform {
 					// every other lambda is processed though
 				} else {
 					// we create a new body with inserted reporting calls if necessary
-					auto newBody = handleCompound(progress, lambda->getBody(), progressReportingLimit, false);
-					newBody = inlineSmallLambdaBodies(progress, newBody, progressReportingLimit);
+					auto newBody = handleCompound(progress, lambda->getBody(), reportingParameters, false);
+					newBody = inlineSmallLambdaBodies(progress, newBody, reportingParameters.progressReportingLimit);
 					res = core::transform::replaceNode(res.getNodeManager(), core::LambdaExprAddress(res)->getBody(), newBody).as<core::LambdaExprPtr>();
 				}
 
@@ -337,7 +341,7 @@ namespace transform {
 			// this is to ensure that if we are handling a compound only (mostly for testing), we also report the progress at it's end
 			if(res.getNodeType() == core::NT_CompoundStmt) {
 				ProgressReportingType progress = 0;
-				res = handleCompound(progress, res.as<core::CompoundStmtPtr>(), progressReportingLimit, true);
+				res = handleCompound(progress, res.as<core::CompoundStmtPtr>(), reportingParameters, true);
 			}
 
 			// Our transformation generated just per-thread reporting calls.
@@ -369,8 +373,9 @@ namespace transform {
 		return std::stoull(uintValue->getValue()->getValue());
 	}
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const ProgressReportingType progressReportingLimit) {
-		return applyProgressEstimationImpl(node, progressReportingLimit);
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const ProgressReportingType progressReportingLimit, float maxIfElseReportingDifferenceFactor) {
+		ReportingParameters parameters{ progressReportingLimit, maxIfElseReportingDifferenceFactor };
+		return applyProgressEstimationImpl(node, parameters);
 	}
 
 } // end namespace transform
