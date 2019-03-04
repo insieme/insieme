@@ -134,7 +134,7 @@ namespace transform {
 	}
 
 
-	#define TEST_PROGRESS(REPORTING_LIMIT, INPUT_IR, DESIRED_IR)                                           \
+	#define TEST_PROGRESS_WITH_MINIMUM(REPORTING_LIMIT, MINIMUM, INPUT_IR, DESIRED_IR)                     \
 	{                                                                                                      \
 		core::NodeManager mgr;                                                                               \
 		core::IRBuilder builder(mgr);                                                                        \
@@ -144,11 +144,13 @@ namespace transform {
 		_finalDesiredIr = "decl report_progress_thread : (uint<16>) -> unit;" + _finalDesiredIr;             \
 		const auto _desiredOutput = builder.normalize(builder.parseStmt(_finalDesiredIr));                   \
 		assert_correct_ir(_desiredOutput);                                                                   \
-		const auto _withProgressEstimation = applyProgressEstimation(_input, REPORTING_LIMIT, 0.05);         \
+		const auto _withProgressEstimation = applyProgressEstimation(_input, REPORTING_LIMIT, 0.05, MINIMUM);\
 		EXPECT_TRUE(_desiredOutput == _withProgressEstimation)                                               \
 		            << "\tActual Pretty: \n" << dumpReadable(_withProgressEstimation) << "\n\n"              \
 		            << "\tExpect Pretty: \n" << dumpReadable(_desiredOutput) << "\n";                        \
 	}
+
+	#define TEST_PROGRESS(REPORTING_LIMIT, INPUT_IR, DESIRED_IR) TEST_PROGRESS_WITH_MINIMUM(REPORTING_LIMIT, 0, INPUT_IR, DESIRED_IR)
 
 
 	TEST(SimpleTests, Basic) {
@@ -1089,6 +1091,80 @@ namespace transform {
 					gen_post_inc(v0);
 					report_progress(2ull);                  // 2 from stmt above
 				}
+			})");
+	}
+
+	TEST(MinimumReporting, Basic) {
+		const auto input = R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;      // effort 1
+				var ref<real<8>,f,f,plain> v2 = 7.0;      // effort 1
+				var ref<real<8>,f,f,plain> v3 = 8.0;      // effort 1
+				var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1; // effort 5
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1; // effort 5
+			})";
+
+		TEST_PROGRESS_WITH_MINIMUM(1, 0, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				report_progress(1ull);
+				var ref<real<8>,f,f,plain> v2 = 7.0;
+				report_progress(1ull);
+				var ref<real<8>,f,f,plain> v3 = 8.0;
+				report_progress(1ull);
+				var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+				report_progress(5ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+		TEST_PROGRESS_WITH_MINIMUM(1, 2, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				var ref<real<8>,f,f,plain> v2 = 7.0;
+				var ref<real<8>,f,f,plain> v3 = 8.0;
+				var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+				report_progress(5ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+		TEST_PROGRESS_WITH_MINIMUM(1, 10, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				var ref<real<8>,f,f,plain> v2 = 7.0;
+				var ref<real<8>,f,f,plain> v3 = 8.0;
+				var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+			})");
+
+		TEST_PROGRESS_WITH_MINIMUM(2, 0, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				var ref<real<8>,f,f,plain> v2 = 7.0;
+				report_progress(2ull);
+				var ref<real<8>,f,f,plain> v3 = 8.0;
+				report_progress(1ull);
+				var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+				report_progress(5ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+		TEST_PROGRESS_WITH_MINIMUM(2, 3, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				var ref<real<8>,f,f,plain> v2 = 7.0;
+				var ref<real<8>,f,f,plain> v3 = 8.0;
+				var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+				report_progress(5ull);
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
+				report_progress(5ull);
+			})");
+		TEST_PROGRESS_WITH_MINIMUM(2, 10, input, R"(
+			{
+				var ref<real<8>,f,f,plain> v1 = 6.0;
+				var ref<real<8>,f,f,plain> v2 = 7.0;
+				var ref<real<8>,f,f,plain> v3 = 8.0;
+				var ref<int<4>,f,f,plain> v4 = 5+4+3+2+1;
+				var ref<int<4>,f,f,plain> v5 = 5+4+3+2+1;
 			})");
 	}
 

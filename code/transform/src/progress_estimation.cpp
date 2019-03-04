@@ -45,6 +45,7 @@
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
 
@@ -64,6 +65,7 @@ namespace transform {
 		struct ReportingParameters {
 			ProgressReportingType progressReportingLimit;
 			float maxIfElseReportingDifferenceFactor;
+			ProgressReportingType minimumReportingThreshold;
 		};
 
 		struct UnreportedProgressAnnotation : public core::value_annotation::copy_on_migration {
@@ -315,6 +317,34 @@ namespace transform {
 			return core::transform::replaceAll(node.getNodeManager(), replacements);
 		}
 
+		core::NodePtr removeSmallReportings(const core::NodePtr& node, const ProgressReportingType minimumReportingThreshold) {
+			core::IRBuilder builder(node->getNodeManager());
+			const auto& reportingExt = node->getNodeManager().getLangExtension<ProgressEstimationExtension>();
+
+			// we handle every compound statement
+			return core::transform::transformBottomUp(node, [&](const core::CompoundStmtPtr& compound){
+				core::StatementList newBody;
+				for(const core::StatementPtr& stmt : compound) {
+					// if a statement within the compound is a reporting but it reports less than the requested minimum
+					if(reportingExt.isCallOfAnyReportingLiteral(stmt)) {
+						if(getReportedProgress(stmt) < minimumReportingThreshold) {
+							// we do not keep this statement
+							continue;
+						}
+					}
+					newBody.push_back(stmt);
+				}
+
+				// create a new compound and migrate annotations if we should create a new one
+				if(newBody.size() != compound.size()) {
+					auto newCompound = builder.compoundStmt(newBody);
+					core::transform::utils::migrateAnnotations(compound, newCompound);
+					return newCompound;
+				}
+				return compound;
+			}, core::transform::globalReplacement);
+		}
+
 		core::NodePtr applyProgressEstimationImpl(const core::NodePtr& node, const ReportingParameters& reportingParameters) {
 			// first we transform all the lambdas bottom to top. We add reporting calls and annotate the unreported progress to them
 			auto res = core::transform::transformBottomUp(node, [&](const core::LambdaExprPtr& lambda) {
@@ -348,6 +378,11 @@ namespace transform {
 			// Now we transform the code so that all the reporting outside parallel regions is changed to non-thread-local reportings
 			res = handleParallelAndSingleReportingCalls(res);
 
+			// remove all reportings below a certain threshold if requested
+			if(reportingParameters.minimumReportingThreshold > 0) {
+				res = removeSmallReportings(res, reportingParameters.minimumReportingThreshold);
+			}
+
 			return res;
 		}
 
@@ -373,8 +408,11 @@ namespace transform {
 		return std::stoull(uintValue->getValue()->getValue());
 	}
 
-	core::NodePtr applyProgressEstimation(const core::NodePtr& node, const ProgressReportingType progressReportingLimit, float maxIfElseReportingDifferenceFactor) {
-		ReportingParameters parameters{ progressReportingLimit, maxIfElseReportingDifferenceFactor };
+	core::NodePtr applyProgressEstimation(const core::NodePtr& node,
+	                                      const ProgressReportingType progressReportingLimit,
+	                                      float maxIfElseReportingDifferenceFactor,
+	                                      const ProgressReportingType minimumReportingThreshold) {
+		ReportingParameters parameters{ progressReportingLimit, maxIfElseReportingDifferenceFactor, minimumReportingThreshold };
 		return applyProgressEstimationImpl(node, parameters);
 	}
 

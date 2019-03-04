@@ -62,9 +62,11 @@ int main(int argc, char** argv) {
 	commonOptions.addFlagsAndParameters(parser);
 	transform::ProgressReportingType reportingLimit;
 	float maxIfElseReportingDifferenceFactor = 0.02;
+	transform::ProgressReportingType reportingMinimum;
 	std::string backendString;
 	parser.addParameter("reporting-limit", reportingLimit, transform::ProgressReportingType{ 1000 }, "progress reporting limit");
-	parser.addParameter("reporting-max-branch-difference-factor", maxIfElseReportingDifferenceFactor, 0.02f, "0.2", "Factor of reporting limit, above which reportings in if and else bodies will not be merged/averaged");
+	parser.addParameter("reporting-max-branch-difference-factor", maxIfElseReportingDifferenceFactor, 0.02f, "0.2", "factor of reporting limit, above which reportings in if and else bodies will not be merged/averaged");
+	parser.addParameter("reporting-minimum", reportingMinimum, transform::ProgressReportingType{ 20 }, "minimum value required for reportings to be generated (use 0 to emit all reportings)");
 	parser.addParameter("backend",         backendString,  std::string(""),                          "backend selection (for compatibility reasons - ignored)");
 	auto options = parser.parse(argc, argv);
 
@@ -92,8 +94,10 @@ int main(int argc, char** argv) {
 	// ----- progress estimation ------
 
 	std::cout << "Applying progress estimation with a reporting limit of " << reportingLimit << " ...\n";
-	std::cout << "  If/Else reportings below a factor of " << maxIfElseReportingDifferenceFactor << " of the reporting limit will be merged/averaged ...\n";
-	auto outputProgram = insieme::transform::applyProgressEstimation(program, reportingLimit, maxIfElseReportingDifferenceFactor);
+	std::cout << "  If/Else reportings below a factor of " << maxIfElseReportingDifferenceFactor << " (="
+			<< (reportingLimit * maxIfElseReportingDifferenceFactor) << ") of the reporting limit will be merged/averaged\n";
+	std::cout << "  Emitting only reportings with progress >= " << reportingMinimum << "\n";
+	auto outputProgram = insieme::transform::applyProgressEstimation(program, reportingLimit, maxIfElseReportingDifferenceFactor, reportingMinimum);
 
 	// Note: The code below has been more or less copied directly from insiemecc
 
